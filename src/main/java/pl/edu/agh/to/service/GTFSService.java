@@ -1,5 +1,6 @@
 package pl.edu.agh.to.service;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class GTFSService {
 
     private final WebClient webClient;
@@ -19,6 +21,7 @@ public class GTFSService {
      * @return byte[] - GTFS trip updates in byte format.
      */
     public byte[] getTripUpdatesAsBytes() {
+        log.info("Fetching TripUpdates.pb from GTFS Realtime API...");
         return webClient.get()
                 .uri("/TripUpdates.pb")
                 .retrieve()
