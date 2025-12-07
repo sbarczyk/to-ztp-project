@@ -25,6 +25,6 @@ public class GtfsClient {
                 .uri("/TripUpdates.pb")
                 .retrieve()
                 .bodyToMono(byte[].class)
-                .block(); // Blocking call is acceptable here for simplicity
+                .block();
     }
 }
