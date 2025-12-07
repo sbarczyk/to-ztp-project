@@ -9,6 +9,8 @@ import pl.edu.agh.to.service.GTFSService;
 @RequiredArgsConstructor
 public class TransportController {
 
+    private final GTFSService gtfsService;
+
     @GetMapping("/")
     public String home() {
         return "Transport service is running!";
@@ -18,7 +20,6 @@ public class TransportController {
     // todo: po zrobieniu unit testa należy wywalić
     @GetMapping("/test")
     public String test() {
-        GTFSService gtfsService = new GTFSService();
         return gtfsService.getTestTripString();
     }
 }

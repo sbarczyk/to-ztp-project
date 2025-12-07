@@ -6,7 +6,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import lombok.RequiredArgsConstructor;
-import pl.edu.agh.to.config.WebClientConfig;
 
 import java.util.List;
 
@@ -18,7 +17,7 @@ import java.util.List;
 @Slf4j
 public class GTFSService {
 
-    private final WebClient webClient = new WebClientConfig().webClient();
+    private final WebClient webClient;
 
     /**
      * Fetches trip updates as bytes from GTFS Realtime API.
