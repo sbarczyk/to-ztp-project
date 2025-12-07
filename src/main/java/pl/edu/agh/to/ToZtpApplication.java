@@ -9,5 +9,4 @@ public class ToZtpApplication {
     public static void main(String[] args) {
         SpringApplication.run(ToZtpApplication.class, args);
     }
-
 }
