@@ -5,6 +5,9 @@ import org.springframework.context.annotation.Configuration;
 
 import java.util.Random;
 
+/**
+ * Configuration class for providing a Random instance as a Spring bean.
+ */
 @Configuration
 public class RandomConfig {
 

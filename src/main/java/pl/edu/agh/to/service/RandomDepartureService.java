@@ -15,6 +15,10 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Random;
 
+/**
+ * Service responsible for fetching, parsing, and processing GTFS data
+ * to return a randomly selected departure.
+ */
 @Service
 @RequiredArgsConstructor
 public class RandomDepartureService {
@@ -23,9 +27,17 @@ public class RandomDepartureService {
     private final GtfsParser gtfsParser;
     private final Random random;
 
+    /**
+     * Fetches GTFS data, selects a random trip update, and extracts departure information.
+     *
+     * @return RandomDepartureDto containing the processed information.
+     * @throws InvalidProtocolBufferException if Protobuf data is invalid.
+     * @throws IllegalStateException if critical data (trips, stops, or time) is missing.
+     */
     public RandomDepartureDto getRandomDepartureInfo() throws InvalidProtocolBufferException {
 
         byte[] data = gtfsClient.fetchTripUpdatesAsBytes();
+
         List<GtfsRealtime.TripUpdate> trips = gtfsParser.parseTripUpdates(data);
 
         if (trips.isEmpty()) {
@@ -48,6 +60,7 @@ public class RandomDepartureService {
         if (!randomStop.hasDeparture() || !randomStop.getDeparture().hasTime()) {
             throw new IllegalStateException("No departure time available");
         }
+
 
         String stopId = randomStop.getStopId();
         long departureEpoch = randomStop.getDeparture().getTime();

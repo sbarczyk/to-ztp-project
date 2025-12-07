@@ -1,8 +1,9 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '4.0.0'
-    id 'io.spring.dependency-management' version '1.1.7'
-    id 'com.google.protobuf' version '0.9.5'
+    // ZMIANA: Wersja 4.0.0 nie istnieje. Używamy stabilnej 3.4.0 (kompatybilnej z Java 21)
+    id 'org.springframework.boot' version '3.5.8'
+    id 'io.spring.dependency-management' version '1.1.6'
+    id 'com.google.protobuf' version '0.9.4'
 }
 
 group = 'pl.edu.agh.to'
@@ -26,26 +27,32 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter-restclient'
-    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
-    implementation 'org.springframework.boot:spring-boot-starter-webflux'
-    implementation 'com.google.protobuf:protobuf-java:4.33.1'
+    // Aplikacja
+    implementation 'org.springframework.boot:spring-boot-starter-webflux' // Dla WebClient
+    implementation 'org.springframework.boot:spring-boot-starter-web'     // Dla REST Controllera (Tomcat)
+    implementation 'com.google.protobuf:protobuf-java:3.25.1'           // Stabilna wersja protobuf
+
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
-    testImplementation 'org.springframework.boot:spring-boot-starter-restclient-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
+    // TESTY
+    // Ta jedna zależność zawiera w sobie @WebMvcTest, @MockBean, TestRestTemplate i JUnit
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+    // Potrzebne do testowania WebFluxa (WebClienta)
     testImplementation 'io.projectreactor:reactor-test'
+
+    // WireMock do testów E2E (niezbędne do mockowania ZTP)
+    testImplementation 'org.wiremock:wiremock-standalone:3.3.1'
 }
 
 tasks.named('test') {
     useJUnitPlatform()
 }
 
+// Konfiguracja Protobuf
 protobuf {
     protoc {
-        artifact = "com.google.protobuf:protoc:4.33.1"
+        artifact = "com.google.protobuf:protoc:3.25.1"
     }
 }
