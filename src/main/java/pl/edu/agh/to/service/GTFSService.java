@@ -53,13 +53,13 @@ public class GTFSService {
 
     // Żeby zobaczyć czy działa
     // todo: po zrobieniu unit testa należy wywalić
-    public String getTestTripString() {
-        try {
-            return getTripUpdates().getFirst().toString();
-        } catch (InvalidProtocolBufferException e) {
-            return e.getMessage();
-        }
-    }
+//    public String getTestTripString() {
+//        try {
+//            return getTripUpdates().getFirst().toString();
+//        } catch (InvalidProtocolBufferException e) {
+//            return e.getMessage();
+//        }
+//    }
 
     public String getRandomDepartureInfo() throws InvalidProtocolBufferException {
 

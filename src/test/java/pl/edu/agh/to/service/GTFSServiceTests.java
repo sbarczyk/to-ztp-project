@@ -4,6 +4,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.transit.realtime.GtfsRealtime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.Instant;
@@ -54,6 +55,39 @@ class GTFSServiceTest {
         assertTrue(result.contains("Stop ID: 2048408"));
         assertTrue(result.contains("Departure time"));
     }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    void shouldReturnByteArray_givenWebClientReturnsData_whenGetTripUpdatesAsBytes_thenCorrectBytesReturned() {
+        // given
+        byte[] expectedBytes = new byte[]{1, 2, 3, 4};
+
+        WebClient webClient = Mockito.mock(WebClient.class);
+
+        WebClient.RequestHeadersUriSpec uriSpec =
+                Mockito.mock(WebClient.RequestHeadersUriSpec.class);
+
+        WebClient.RequestHeadersSpec headersSpec =
+                Mockito.mock(WebClient.RequestHeadersSpec.class);
+
+        WebClient.ResponseSpec responseSpec =
+                Mockito.mock(WebClient.ResponseSpec.class);
+
+        Mockito.when(webClient.get()).thenReturn(uriSpec);
+        Mockito.when(uriSpec.uri(Mockito.anyString())).thenReturn(headersSpec);
+        Mockito.when(headersSpec.retrieve()).thenReturn(responseSpec);
+        Mockito.when(responseSpec.bodyToMono(byte[].class))
+                .thenReturn(reactor.core.publisher.Mono.just(expectedBytes));
+
+        GTFSService service = new GTFSService(webClient);
+
+        // when
+        byte[] result = service.getTripUpdatesAsBytes();
+
+        // then
+        assertArrayEquals(expectedBytes, result);
+    }
+
 
     private byte[] createFakeGtfsFeed() throws InvalidProtocolBufferException {
         long now = Instant.now().getEpochSecond();
@@ -106,4 +140,7 @@ class GTFSServiceTest {
 
         return feedMessage.toByteArray();
     }
+
+
+
 }
