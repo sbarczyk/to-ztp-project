@@ -1,9 +1,9 @@
 plugins {
     id 'java'
-    // ZMIANA: Wersja 4.0.0 nie istnieje. Używamy stabilnej 3.4.0 (kompatybilnej z Java 21)
     id 'org.springframework.boot' version '3.5.8'
     id 'io.spring.dependency-management' version '1.1.6'
     id 'com.google.protobuf' version '0.9.4'
+    id "org.sonarqube" version "7.1.0.6387"
 }
 
 group = 'pl.edu.agh.to'
@@ -28,21 +28,16 @@ repositories {
 
 dependencies {
     // Aplikacja
-    implementation 'org.springframework.boot:spring-boot-starter-webflux' // Dla WebClient
-    implementation 'org.springframework.boot:spring-boot-starter-web'     // Dla REST Controllera (Tomcat)
-    implementation 'com.google.protobuf:protobuf-java:3.25.1'           // Stabilna wersja protobuf
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'com.google.protobuf:protobuf-java:3.25.1'
 
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
 
-    // TESTY
-    // Ta jedna zależność zawiera w sobie @WebMvcTest, @MockBean, TestRestTemplate i JUnit
+
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
-
-    // Potrzebne do testowania WebFluxa (WebClienta)
     testImplementation 'io.projectreactor:reactor-test'
-
-    // WireMock do testów E2E (niezbędne do mockowania ZTP)
     testImplementation 'org.wiremock:wiremock-standalone:3.3.1'
 }
 
@@ -50,9 +45,16 @@ tasks.named('test') {
     useJUnitPlatform()
 }
 
-// Konfiguracja Protobuf
 protobuf {
     protoc {
         artifact = "com.google.protobuf:protoc:3.25.1"
+    }
+}
+
+sonar {
+    properties {
+        property "sonar.projectKey", "sbarczyk_to-ztp-project"
+        property "sonar.organization", "sbarczyk"
+        property "sonar.host.url", "https://sonarcloud.io"
     }
 }

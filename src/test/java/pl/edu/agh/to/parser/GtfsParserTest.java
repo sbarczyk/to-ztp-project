@@ -108,7 +108,7 @@ class GtfsParserTest {
                 () -> parser.parseTripUpdates(invalidData));
     }
 
-    private byte[] createFeedWithTrips(int numberOfTrips) throws InvalidProtocolBufferException {
+    private byte[] createFeedWithTrips(int numberOfTrips) {
         long now = Instant.now().getEpochSecond();
 
         GtfsRealtime.FeedHeader header =

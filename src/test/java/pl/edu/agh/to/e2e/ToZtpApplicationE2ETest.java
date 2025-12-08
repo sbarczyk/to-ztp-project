@@ -1,4 +1,4 @@
-package pl.edu.agh.to;
+package pl.edu.agh.to.e2e;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.google.transit.realtime.GtfsRealtime;

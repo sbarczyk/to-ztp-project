@@ -14,13 +14,13 @@ public class WebClientConfig {
 
     @Value("${ztp.gtfs.url}")
     private String gtfsUrl;
-    private final int maxMemorySize = 10 * 1024 * 1024; // 10 MB
+    private static final int MAX_MEMORY_SIZE = 10 * 1024 * 1024; // 10 MB
 
 
     @Bean
     public WebClient webClient() {
         ExchangeStrategies exchangeStrategies = ExchangeStrategies.builder()
-                .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(maxMemorySize))
+                .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(MAX_MEMORY_SIZE))
                 .build();
 
         return WebClient.builder()
