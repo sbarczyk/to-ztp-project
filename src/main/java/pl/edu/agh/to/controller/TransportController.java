@@ -7,9 +7,7 @@ import org.springframework.web.bind.annotation.RestController;
 import pl.edu.agh.to.model.RandomDepartureDto;
 import pl.edu.agh.to.service.RandomDepartureService;
 
-/**
- * REST controller handling transport information requests.
- */
+
 @RestController
 @RequiredArgsConstructor
 public class TransportController {
