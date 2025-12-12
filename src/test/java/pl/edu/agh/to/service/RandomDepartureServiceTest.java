@@ -17,15 +17,16 @@ class RandomDepartureServiceTest {
 
     private GtfsClient client;
     private GtfsParser parser;
-    private Random random;
     private RandomDepartureService service;
+    private static final String VEHICLE_TEST_ID = "M:401";
+    private static final String STOP_TEST_ID = "2048408";
+    private static final String TRIP_TEST_ID = "x";
 
     @BeforeEach
     void setUp() {
         client = Mockito.mock(GtfsClient.class);
         parser = Mockito.mock(GtfsParser.class);
-        random = new Random(0);
-        service = new RandomDepartureService(client, parser, random);
+        service = new RandomDepartureService(client, parser, new Random(0));
     }
 
     @Test
@@ -44,8 +45,8 @@ class RandomDepartureServiceTest {
         RandomDepartureDto dto = service.getRandomDepartureInfo();
 
         // then
-        assertEquals("M:401", dto.getVehicleId());
-        assertEquals("2048408", dto.getStopId());
+        assertEquals(VEHICLE_TEST_ID, dto.getVehicleId());
+        assertEquals(STOP_TEST_ID, dto.getStopId());
         assertNotNull(dto.getDepartureTime());
     }
 
@@ -68,8 +69,8 @@ class RandomDepartureServiceTest {
 
         GtfsRealtime.TripUpdate tripUpdate =
                 GtfsRealtime.TripUpdate.newBuilder()
-                        .setTrip(GtfsRealtime.TripDescriptor.newBuilder().setTripId("x").build())
-                        .setVehicle(GtfsRealtime.VehicleDescriptor.newBuilder().setId("M:401").build())
+                        .setTrip(GtfsRealtime.TripDescriptor.newBuilder().setTripId(TRIP_TEST_ID).build())
+                        .setVehicle(GtfsRealtime.VehicleDescriptor.newBuilder().setId(VEHICLE_TEST_ID).build())
                         .build();
 
         Mockito.when(parser.parseTripUpdates(Mockito.any()))
@@ -87,13 +88,13 @@ class RandomDepartureServiceTest {
 
         GtfsRealtime.TripUpdate.StopTimeUpdate stop =
                 GtfsRealtime.TripUpdate.StopTimeUpdate.newBuilder()
-                        .setStopId("2048408")
+                        .setStopId(STOP_TEST_ID)
                         .build();
 
         GtfsRealtime.TripUpdate tripUpdate =
                 GtfsRealtime.TripUpdate.newBuilder()
-                        .setTrip(GtfsRealtime.TripDescriptor.newBuilder().setTripId("x").build())
-                        .setVehicle(GtfsRealtime.VehicleDescriptor.newBuilder().setId("M:401").build())
+                        .setTrip(GtfsRealtime.TripDescriptor.newBuilder().setTripId(TRIP_TEST_ID).build())
+                        .setVehicle(GtfsRealtime.VehicleDescriptor.newBuilder().setId(VEHICLE_TEST_ID).build())
                         .addStopTimeUpdate(stop)
                         .build();
 
@@ -126,12 +127,12 @@ class RandomDepartureServiceTest {
 
         GtfsRealtime.VehicleDescriptor vehicleDescriptor =
                 GtfsRealtime.VehicleDescriptor.newBuilder()
-                        .setId("M:401")
+                        .setId(VEHICLE_TEST_ID)
                         .build();
 
         GtfsRealtime.TripUpdate.StopTimeUpdate stopTimeUpdate =
                 GtfsRealtime.TripUpdate.StopTimeUpdate.newBuilder()
-                        .setStopId("2048408")
+                        .setStopId(STOP_TEST_ID)
                         .setDeparture(
                                 GtfsRealtime.TripUpdate.StopTimeEvent.newBuilder()
                                         .setTime(epochTime)

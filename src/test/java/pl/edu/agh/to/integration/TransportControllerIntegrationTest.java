@@ -28,6 +28,8 @@ class TransportControllerIntegrationTest {
     @MockitoBean
     private RandomDepartureService service;
 
+    private static final String RANDOM_DEPARTURE_ENDPOINT = "/random-departure";
+
     // --- Positive Scenario (Happy Path) ---
 
     @Test
@@ -43,7 +45,7 @@ class TransportControllerIntegrationTest {
         given(service.getRandomDepartureInfo()).willReturn(dto);
 
         // when & then
-        mockMvc.perform(get("/random-departure")
+        mockMvc.perform(get(RANDOM_DEPARTURE_ENDPOINT)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -60,7 +62,7 @@ class TransportControllerIntegrationTest {
         given(service.getRandomDepartureInfo()).willThrow(new InvalidProtocolBufferException("Test exception"));
 
         // when & then
-        mockMvc.perform(get("/random-departure"))
+        mockMvc.perform(get(RANDOM_DEPARTURE_ENDPOINT))
                 .andExpect(status().isInternalServerError())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Data parsing failed")));
     }
@@ -71,7 +73,7 @@ class TransportControllerIntegrationTest {
         given(service.getRandomDepartureInfo()).willThrow(new IllegalStateException("No trip updates available"));
 
         // when & then
-        mockMvc.perform(get("/random-departure"))
+        mockMvc.perform(get(RANDOM_DEPARTURE_ENDPOINT))
                 .andExpect(status().isInternalServerError())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("No trip updates available")));
     }

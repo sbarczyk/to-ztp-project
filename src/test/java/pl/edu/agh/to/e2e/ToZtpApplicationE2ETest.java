@@ -32,6 +32,12 @@ class ToZtpApplicationE2ETest {
 
     private static WireMockServer wireMockServer;
 
+    private static final String UPDATES_URL = "/TripUpdates.pb";
+    private static final String DOMAIN_PART = "http://localhost:";
+    private static final String ENDPOINT_PART = "/random-departure";
+    private static final String CONTENT_TYPE_HEADER = "Content-Type";
+    private static final String CONTENT_TYPE_VALUE = "application/x-protobuf";
+
     @BeforeAll
     static void startWireMock() {
         wireMockServer = new WireMockServer(0);
@@ -59,15 +65,15 @@ class ToZtpApplicationE2ETest {
         long now = Instant.now().getEpochSecond();
         byte[] validGtfsData = createGtfsProtobufData("BUS-E2E", "STOP-E2E", now, true);
 
-        wireMockServer.stubFor(get(urlEqualTo("/TripUpdates.pb"))
+        wireMockServer.stubFor(get(urlEqualTo(UPDATES_URL))
                 .willReturn(aResponse()
                         .withStatus(200)
-                        .withHeader("Content-Type", "application/x-protobuf")
+                        .withHeader(CONTENT_TYPE_HEADER, CONTENT_TYPE_VALUE)
                         .withBody(validGtfsData)));
 
         // when
         ResponseEntity<RandomDepartureDto> response = restTemplate.getForEntity(
-                "http://localhost:" + port + "/random-departure",
+                DOMAIN_PART + port + ENDPOINT_PART,
                 RandomDepartureDto.class
         );
 
@@ -81,12 +87,12 @@ class ToZtpApplicationE2ETest {
     @Test
     void shouldReturnError500_whenExternalGtfsIsDown() {
         // given
-        wireMockServer.stubFor(get(urlEqualTo("/TripUpdates.pb"))
+        wireMockServer.stubFor(get(urlEqualTo(UPDATES_URL))
                 .willReturn(aResponse().withStatus(500)));
 
         // when
         ResponseEntity<String> response = restTemplate.getForEntity(
-                "http://localhost:" + port + "/random-departure",
+                DOMAIN_PART + port + ENDPOINT_PART,
                 String.class
         );
 
@@ -99,15 +105,15 @@ class ToZtpApplicationE2ETest {
         // given
         byte[] emptyTripsData = createGtfsProtobufData("X", "Y", 0, false);
 
-        wireMockServer.stubFor(get(urlEqualTo("/TripUpdates.pb"))
+        wireMockServer.stubFor(get(urlEqualTo(UPDATES_URL))
                 .willReturn(aResponse()
                         .withStatus(200)
-                        .withHeader("Content-Type", "application/x-protobuf")
+                        .withHeader(CONTENT_TYPE_HEADER, CONTENT_TYPE_VALUE)
                         .withBody(emptyTripsData)));
 
         // when
         ResponseEntity<String> response = restTemplate.getForEntity(
-                "http://localhost:" + port + "/random-departure",
+                DOMAIN_PART + port + ENDPOINT_PART,
                 String.class
         );
 
@@ -120,15 +126,15 @@ class ToZtpApplicationE2ETest {
         // given
         byte[] corruptedData = new byte[]{1, 2, 3, 4, 5};
 
-        wireMockServer.stubFor(get(urlEqualTo("/TripUpdates.pb"))
+        wireMockServer.stubFor(get(urlEqualTo(UPDATES_URL))
                 .willReturn(aResponse()
                         .withStatus(200)
-                        .withHeader("Content-Type", "application/x-protobuf")
+                        .withHeader(CONTENT_TYPE_HEADER, CONTENT_TYPE_VALUE)
                         .withBody(corruptedData)));
 
         // when
         ResponseEntity<String> response = restTemplate.getForEntity(
-                "http://localhost:" + port + "/random-departure",
+                DOMAIN_PART + port + ENDPOINT_PART,
                 String.class
         );
 
