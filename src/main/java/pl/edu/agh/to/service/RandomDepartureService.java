@@ -11,6 +11,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Random;
 
 /**
@@ -39,7 +40,7 @@ public class RandomDepartureService {
         List<GtfsRealtime.TripUpdate> trips = gtfsParser.parseTripUpdates(data);
 
         if (trips.isEmpty()) {
-            throw new IllegalStateException("No trip updates available");
+            throw new NoSuchElementException("No trip updates available");
         }
 
         GtfsRealtime.TripUpdate randomTrip =
@@ -49,14 +50,14 @@ public class RandomDepartureService {
                 randomTrip.getStopTimeUpdateList();
 
         if (stops.isEmpty()) {
-            throw new IllegalStateException("No stop updates for selected trip");
+            throw new NoSuchElementException("No stop updates for selected trip");
         }
 
         GtfsRealtime.TripUpdate.StopTimeUpdate randomStop =
                 stops.get(random.nextInt(stops.size()));
 
         if (!randomStop.hasDeparture() || !randomStop.getDeparture().hasTime()) {
-            throw new IllegalStateException("No departure time available");
+            throw new NoSuchElementException("No departure time available");
         }
 
 
