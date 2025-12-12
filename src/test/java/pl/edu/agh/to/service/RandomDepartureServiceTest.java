@@ -9,13 +9,13 @@ import pl.edu.agh.to.model.RandomDepartureDto;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Random;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -63,9 +63,11 @@ class RandomDepartureServiceTest {
         when(parser.parseTripUpdates(Mockito.any()))
                 .thenReturn(List.of());
 
-        // when / then
-        assertThrows(IllegalStateException.class,
-                () -> service.getRandomDepartureInfo());
+        // when
+        Throwable thrown = catchThrowable(() -> service.getRandomDepartureInfo());
+
+        // then
+        assertThat(thrown).isInstanceOf(NoSuchElementException.class);
     }
 
     @Test
@@ -82,9 +84,11 @@ class RandomDepartureServiceTest {
         when(parser.parseTripUpdates(Mockito.any()))
                 .thenReturn(List.of(tripUpdate));
 
-        // when / then
-        assertThrows(IllegalStateException.class,
-                () -> service.getRandomDepartureInfo());
+        // when
+        Throwable thrown = catchThrowable(() -> service.getRandomDepartureInfo());
+
+        // then
+        assertThat(thrown).isInstanceOf(NoSuchElementException.class);
     }
 
     @Test
@@ -107,9 +111,11 @@ class RandomDepartureServiceTest {
         when(parser.parseTripUpdates(Mockito.any()))
                 .thenReturn(List.of(tripUpdate));
 
-        // when / then
-        assertThrows(IllegalStateException.class,
-                () -> service.getRandomDepartureInfo());
+        // when
+        Throwable thrown = catchThrowable(() -> service.getRandomDepartureInfo());
+
+        // then
+        assertThat(thrown).isInstanceOf(NoSuchElementException.class);
     }
 
     @Test
