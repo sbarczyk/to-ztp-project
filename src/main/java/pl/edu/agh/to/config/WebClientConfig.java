@@ -6,9 +6,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
 
-/**
- * Configuration for the WebClient used to connect to the external GTFS service.
- */
 @Configuration
 public class WebClientConfig {
 

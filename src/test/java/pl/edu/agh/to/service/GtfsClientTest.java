@@ -1,4 +1,4 @@
-package pl.edu.agh.to.client;
+package pl.edu.agh.to.service;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;

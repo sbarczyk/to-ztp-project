@@ -5,9 +5,7 @@ import com.google.transit.realtime.GtfsRealtime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import pl.edu.agh.to.client.GtfsClient;
 import pl.edu.agh.to.model.RandomDepartureDto;
-import pl.edu.agh.to.parser.GtfsParser;
 
 import java.time.Instant;
 import java.util.List;

@@ -1,15 +1,15 @@
-package pl.edu.agh.to.client;
+package pl.edu.agh.to.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
 /**
  * Client for fetching GTFS Realtime data from the external ZTP API.
  */
 @Slf4j
-@Component
+@Service
 @RequiredArgsConstructor
 public class GtfsClient {
 

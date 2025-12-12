@@ -16,9 +16,6 @@ public class TransportController {
 
     private final RandomDepartureService randomDepartureService;
 
-    /**
-     * Simple home endpoint for service health check.
-     */
     @GetMapping("/")
     public String home() {
         return "Transport service is running!";
