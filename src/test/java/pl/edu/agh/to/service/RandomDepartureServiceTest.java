@@ -5,118 +5,131 @@ import com.google.transit.realtime.GtfsRealtime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import pl.edu.agh.to.client.GtfsClient;
 import pl.edu.agh.to.model.RandomDepartureDto;
-import pl.edu.agh.to.parser.GtfsParser;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Random;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class RandomDepartureServiceTest {
 
     private GtfsClient client;
     private GtfsParser parser;
-    private Random random;
     private RandomDepartureService service;
+    private static final String VEHICLE_TEST_ID = "M:401";
+    private static final String STOP_TEST_ID = "2048408";
+    private static final String TRIP_TEST_ID = "x";
 
     @BeforeEach
     void setUp() {
-        client = Mockito.mock(GtfsClient.class);
-        parser = Mockito.mock(GtfsParser.class);
-        random = new Random(0);
-        service = new RandomDepartureService(client, parser, random);
+        client = mock(GtfsClient.class);
+        parser = mock(GtfsParser.class);
+        service = new RandomDepartureService(client, parser, new Random(0));
     }
 
     @Test
     void shouldReturnDto_givenValidData_thenCorrectDtoReturned() throws Exception {
         // given
         byte[] bytes = new byte[]{1, 2, 3};
-        Mockito.when(client.fetchTripUpdatesAsBytes()).thenReturn(bytes);
+        when(client.fetchTripUpdatesAsBytes()).thenReturn(bytes);
 
         long now = Instant.now().getEpochSecond();
         GtfsRealtime.TripUpdate tripUpdate = createValidTripUpdate(now);
 
-        Mockito.when(parser.parseTripUpdates(bytes))
+        when(parser.parseTripUpdates(bytes))
                 .thenReturn(List.of(tripUpdate));
 
         // when
         RandomDepartureDto dto = service.getRandomDepartureInfo();
 
         // then
-        assertEquals("M:401", dto.getVehicleId());
-        assertEquals("2048408", dto.getStopId());
+        assertEquals(VEHICLE_TEST_ID, dto.getVehicleId());
+        assertEquals(STOP_TEST_ID, dto.getStopId());
         assertNotNull(dto.getDepartureTime());
     }
 
     @Test
-    void shouldThrowException_givenNoTrips_thenIllegalStateThrown() throws Exception {
+    void shouldThrowException_givenNoTrips_thenNoSuchElementThrown() throws Exception {
         // given
-        Mockito.when(client.fetchTripUpdatesAsBytes()).thenReturn(new byte[]{});
-        Mockito.when(parser.parseTripUpdates(Mockito.any()))
+        when(client.fetchTripUpdatesAsBytes()).thenReturn(new byte[]{});
+        when(parser.parseTripUpdates(Mockito.any()))
                 .thenReturn(List.of());
 
-        // when / then
-        assertThrows(IllegalStateException.class,
-                () -> service.getRandomDepartureInfo());
+        // when
+        Throwable thrown = catchThrowable(() -> service.getRandomDepartureInfo());
+
+        // then
+        assertThat(thrown).isInstanceOf(NoSuchElementException.class);
     }
 
     @Test
-    void shouldThrowException_givenNoStops_thenIllegalStateThrown() throws Exception {
+    void shouldThrowException_givenNoStops_thenNoSuchElementThrown() throws Exception {
         // given
-        Mockito.when(client.fetchTripUpdatesAsBytes()).thenReturn(new byte[]{});
+        when(client.fetchTripUpdatesAsBytes()).thenReturn(new byte[]{});
 
         GtfsRealtime.TripUpdate tripUpdate =
                 GtfsRealtime.TripUpdate.newBuilder()
-                        .setTrip(GtfsRealtime.TripDescriptor.newBuilder().setTripId("x").build())
-                        .setVehicle(GtfsRealtime.VehicleDescriptor.newBuilder().setId("M:401").build())
+                        .setTrip(GtfsRealtime.TripDescriptor.newBuilder().setTripId(TRIP_TEST_ID).build())
+                        .setVehicle(GtfsRealtime.VehicleDescriptor.newBuilder().setId(VEHICLE_TEST_ID).build())
                         .build();
 
-        Mockito.when(parser.parseTripUpdates(Mockito.any()))
+        when(parser.parseTripUpdates(Mockito.any()))
                 .thenReturn(List.of(tripUpdate));
 
-        // when / then
-        assertThrows(IllegalStateException.class,
-                () -> service.getRandomDepartureInfo());
+        // when
+        Throwable thrown = catchThrowable(() -> service.getRandomDepartureInfo());
+
+        // then
+        assertThat(thrown).isInstanceOf(NoSuchElementException.class);
     }
 
     @Test
-    void shouldThrowException_givenStopWithoutDepartureTime_thenIllegalStateThrown() throws Exception {
+    void shouldThrowException_givenStopWithoutDepartureTime_thenNoSuchElementThrown() throws Exception {
         // given
-        Mockito.when(client.fetchTripUpdatesAsBytes()).thenReturn(new byte[]{});
+        when(client.fetchTripUpdatesAsBytes()).thenReturn(new byte[]{});
 
         GtfsRealtime.TripUpdate.StopTimeUpdate stop =
                 GtfsRealtime.TripUpdate.StopTimeUpdate.newBuilder()
-                        .setStopId("2048408")
+                        .setStopId(STOP_TEST_ID)
                         .build();
 
         GtfsRealtime.TripUpdate tripUpdate =
                 GtfsRealtime.TripUpdate.newBuilder()
-                        .setTrip(GtfsRealtime.TripDescriptor.newBuilder().setTripId("x").build())
-                        .setVehicle(GtfsRealtime.VehicleDescriptor.newBuilder().setId("M:401").build())
+                        .setTrip(GtfsRealtime.TripDescriptor.newBuilder().setTripId(TRIP_TEST_ID).build())
+                        .setVehicle(GtfsRealtime.VehicleDescriptor.newBuilder().setId(VEHICLE_TEST_ID).build())
                         .addStopTimeUpdate(stop)
                         .build();
 
-        Mockito.when(parser.parseTripUpdates(Mockito.any()))
+        when(parser.parseTripUpdates(Mockito.any()))
                 .thenReturn(List.of(tripUpdate));
 
-        // when / then
-        assertThrows(IllegalStateException.class,
-                () -> service.getRandomDepartureInfo());
+        // when
+        Throwable thrown = catchThrowable(() -> service.getRandomDepartureInfo());
+
+        // then
+        assertThat(thrown).isInstanceOf(NoSuchElementException.class);
     }
 
     @Test
     void shouldPropagateException_givenParserThrowsException_thenExceptionPropagated() throws Exception {
         // given
-        Mockito.when(client.fetchTripUpdatesAsBytes()).thenReturn(new byte[]{});
-        Mockito.when(parser.parseTripUpdates(Mockito.any()))
+        when(client.fetchTripUpdatesAsBytes()).thenReturn(new byte[]{});
+        when(parser.parseTripUpdates(Mockito.any()))
                 .thenThrow(new InvalidProtocolBufferException("invalid"));
 
-        // when / then
-        assertThrows(InvalidProtocolBufferException.class,
-                () -> service.getRandomDepartureInfo());
+        // when
+        Throwable thrown = catchThrowable(() -> service.getRandomDepartureInfo());
+
+        // then
+        assertThat(thrown).isInstanceOf(InvalidProtocolBufferException.class);
     }
 
     private GtfsRealtime.TripUpdate createValidTripUpdate(long epochTime) {
@@ -128,12 +141,12 @@ class RandomDepartureServiceTest {
 
         GtfsRealtime.VehicleDescriptor vehicleDescriptor =
                 GtfsRealtime.VehicleDescriptor.newBuilder()
-                        .setId("M:401")
+                        .setId(VEHICLE_TEST_ID)
                         .build();
 
         GtfsRealtime.TripUpdate.StopTimeUpdate stopTimeUpdate =
                 GtfsRealtime.TripUpdate.StopTimeUpdate.newBuilder()
-                        .setStopId("2048408")
+                        .setStopId(STOP_TEST_ID)
                         .setDeparture(
                                 GtfsRealtime.TripUpdate.StopTimeEvent.newBuilder()
                                         .setTime(epochTime)

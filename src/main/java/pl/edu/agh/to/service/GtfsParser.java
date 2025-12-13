@@ -1,15 +1,15 @@
-package pl.edu.agh.to.parser;
+package pl.edu.agh.to.service;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.transit.realtime.GtfsRealtime;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 /**
- * Component responsible for parsing raw GTFS Realtime Protobuf data.
+ * Responsible for parsing raw GTFS Realtime Protobuf data.
  */
-@Component
+@Service
 public class GtfsParser {
 
     /**

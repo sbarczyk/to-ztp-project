@@ -7,20 +7,25 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-/**
- * Global exception handler for REST controllers.
- */
+import java.util.NoSuchElementException;
+
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
 
     /**
-     * Handles exceptions related to critical business logic failures (e.g., no data available).
+     * Handles exceptions related to business logic and missing data
+     * (e.g. no trips, no stops, no departure time).
      */
-    @ExceptionHandler(IllegalStateException.class)
-    public ResponseEntity<String> handleIllegalStateException(IllegalStateException ex) {
+    @ExceptionHandler({
+            IllegalStateException.class,
+            NoSuchElementException.class
+    })
+    public ResponseEntity<String> handleLogicExceptions(RuntimeException ex) {
         log.error("Logic error occurred: {}", ex.getMessage());
-        return new ResponseEntity<>("Internal Server Error: " + ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Internal Server Error: " + ex.getMessage());
     }
 
     /**
@@ -29,6 +34,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidProtocolBufferException.class)
     public ResponseEntity<String> handleParsingException(InvalidProtocolBufferException ex) {
         log.error("Parsing error occurred: {}", ex.getMessage());
-        return new ResponseEntity<>("Internal Server Error: Data parsing failed.", HttpStatus.INTERNAL_SERVER_ERROR);
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Internal Server Error: Data parsing failed.");
     }
 }
