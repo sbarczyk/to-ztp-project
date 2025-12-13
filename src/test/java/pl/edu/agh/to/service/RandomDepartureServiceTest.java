@@ -57,7 +57,7 @@ class RandomDepartureServiceTest {
     }
 
     @Test
-    void shouldThrowException_givenNoTrips_thenIllegalStateThrown() throws Exception {
+    void shouldThrowException_givenNoTrips_thenNoSuchElementThrown() throws Exception {
         // given
         when(client.fetchTripUpdatesAsBytes()).thenReturn(new byte[]{});
         when(parser.parseTripUpdates(Mockito.any()))
@@ -71,7 +71,7 @@ class RandomDepartureServiceTest {
     }
 
     @Test
-    void shouldThrowException_givenNoStops_thenIllegalStateThrown() throws Exception {
+    void shouldThrowException_givenNoStops_thenNoSuchElementThrown() throws Exception {
         // given
         when(client.fetchTripUpdatesAsBytes()).thenReturn(new byte[]{});
 
@@ -92,7 +92,7 @@ class RandomDepartureServiceTest {
     }
 
     @Test
-    void shouldThrowException_givenStopWithoutDepartureTime_thenIllegalStateThrown() throws Exception {
+    void shouldThrowException_givenStopWithoutDepartureTime_thenNoSuchElementThrown() throws Exception {
         // given
         when(client.fetchTripUpdatesAsBytes()).thenReturn(new byte[]{});
 
