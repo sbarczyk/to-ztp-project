@@ -1,4 +1,4 @@
-package pl.edu.agh.to.service;
+package pl.edu.agh.to.gtfs.realtime;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.transit.realtime.GtfsRealtime;

@@ -1,4 +1,4 @@
-package pl.edu.agh.to.service;
+package pl.edu.agh.to.gtfs.realtime;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

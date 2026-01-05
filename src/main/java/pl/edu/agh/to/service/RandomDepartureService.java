@@ -4,6 +4,8 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.transit.realtime.GtfsRealtime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import pl.edu.agh.to.gtfs.realtime.GtfsClient;
+import pl.edu.agh.to.gtfs.realtime.GtfsParser;
 import pl.edu.agh.to.model.RandomDepartureDto;
 
 
