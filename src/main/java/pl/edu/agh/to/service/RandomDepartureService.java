@@ -12,9 +12,7 @@ import pl.edu.agh.to.model.RandomDepartureDto;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Random;
+import java.util.*;
 
 /**
  * Service responsible for fetching, parsing, and processing GTFS data
@@ -81,5 +79,25 @@ public class RandomDepartureService {
 
         throw new NoSuchElementException(
                 "Unable to find full valid random departure after " + MAX_ATTEMPTS + " attempts");
+    }
+
+
+    public Map<String, Long> getCurrentDelays() {
+        Map<String, Long> delays = new HashMap<>();
+        try {
+            byte[] data = gtfsClient.fetchTripUpdatesAsBytes();
+            List<GtfsRealtime.TripUpdate> updates = gtfsParser.parseTripUpdates(data);
+
+            for (GtfsRealtime.TripUpdate tu : updates) {
+                if (tu.hasTrip() && tu.getStopTimeUpdateCount() > 0) {
+                    String tripId = tu.getTrip().getTripId();
+                    long delay = tu.getStopTimeUpdate(0).getArrival().getDelay();
+                    delays.put(tripId, delay);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error downloading Realtime: " + e.getMessage());
+        }
+        return delays;
     }
 }
