@@ -3,7 +3,9 @@ package pl.edu.agh.to.gtfs.statics;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import pl.edu.agh.to.exceptions.StaticGtfsExtractException;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -23,25 +25,31 @@ public class StaticGtfsService {
     private String dataDir;
 
     public Map<String, Path> downloadAndExtractAll() {
-        // 1) download ZIPs to disk
         Map<String, Path> downloaded = staticGtfsClient.downloadAllZipsToDisk();
 
-        // 2) extract each ZIP into data/extracted/<suffix>/
         Map<String, Path> extractedRoots = new LinkedHashMap<>();
         Path extractedBase = Path.of(dataDir, "extracted");
 
         for (String rawName : staticFiles) {
             String fileName = rawName.trim();
 
-            Path zipPath = downloaded.get(fileName);
-            if (zipPath == null) {
-                zipPath = Path.of(dataDir, fileName);
+            Path zipPath = downloaded.getOrDefault(fileName, Path.of(dataDir, fileName));
+            if (!Files.exists(zipPath)) {
+                throw new StaticGtfsExtractException("Zip file not found: " + zipPath);
             }
 
-            String datasetKey = datasetKeyFromFileName(fileName); // A/M/T
+            String datasetKey = datasetKeyFromFileName(fileName);
             Path targetDir = extractedBase.resolve(datasetKey);
 
-            zipExtractor.extractZipToDirectory(zipPath, targetDir);
+            try {
+                zipExtractor.extractZipToDirectory(zipPath, targetDir);
+            } catch (RuntimeException e) {
+                throw new StaticGtfsExtractException(
+                        "Failed to extract dataset " + datasetKey + " from " + zipPath,
+                        e
+                );
+            }
+
             extractedRoots.put(datasetKey, targetDir);
         }
 
@@ -52,7 +60,7 @@ public class StaticGtfsService {
         int underscore = fileName.lastIndexOf('_');
         int dot = fileName.lastIndexOf('.');
         if (underscore < 0 || dot < 0 || underscore + 1 >= dot) {
-            throw new IllegalStateException("Unexpected static GTFS file name: " + fileName);
+            throw new StaticGtfsExtractException("Unexpected static GTFS file name: " + fileName);
         }
         return fileName.substring(underscore + 1, dot);
     }

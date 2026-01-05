@@ -1,7 +1,7 @@
 package pl.edu.agh.to.gtfs.statics;
 
 import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Service;
+import pl.edu.agh.to.exceptions.StaticGtfsExtractException;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -11,14 +11,14 @@ import java.nio.file.StandardCopyOption;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-@Service
+@Component
 public class GtfsZipExtractor {
 
     public void extractZipToDirectory(Path zipFile, Path targetDir) {
         try {
             Files.createDirectories(targetDir);
         } catch (IOException e) {
-            throw new IllegalStateException("Failed to create target directory: " + targetDir, e);
+            throw new StaticGtfsExtractException("Failed to create target directory: " + targetDir, e);
         }
 
         try (InputStream in = Files.newInputStream(zipFile);
@@ -33,7 +33,7 @@ public class GtfsZipExtractor {
                 Path entryPath = targetDir.resolve(entry.getName()).normalize();
 
                 if (!entryPath.startsWith(targetDir)) {
-                    throw new IllegalStateException("Zip entry outside target dir: " + entry.getName());
+                    throw new StaticGtfsExtractException("Zip entry outside target dir: " + entry.getName());
                 }
 
                 Files.createDirectories(entryPath.getParent());
@@ -41,7 +41,9 @@ public class GtfsZipExtractor {
             }
 
         } catch (IOException e) {
-            throw new IllegalStateException("Failed to extract zip: " + zipFile, e);
+            throw new StaticGtfsExtractException("Failed to extract zip: " + zipFile, e);
+        } catch (RuntimeException e) {
+            throw new StaticGtfsExtractException("Invalid zip structure: " + zipFile, e);
         }
     }
 }

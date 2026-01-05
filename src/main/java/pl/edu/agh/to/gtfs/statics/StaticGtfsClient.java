@@ -7,6 +7,7 @@ import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import pl.edu.agh.to.exceptions.StaticGtfsDownloadException;
 import reactor.core.publisher.Flux;
 
 import java.io.IOException;
@@ -59,25 +60,37 @@ public class StaticGtfsClient {
         try {
             Files.deleteIfExists(targetPath);
         } catch (IOException e) {
-            throw new IllegalStateException("Failed to delete existing file: " + targetPath, e);
+            throw new StaticGtfsDownloadException("Failed to delete existing file: " + targetPath, e);
         }
 
         Flux<DataBuffer> body = webClient.get()
                 .uri(url)
                 .retrieve()
+                .onStatus(
+                        status -> status.is4xxClientError() || status.is5xxServerError(),
+                        response -> response.bodyToMono(String.class)
+                                .defaultIfEmpty("")
+                                .map(msg -> new StaticGtfsDownloadException(
+                                        "Failed to download " + fileName + " (HTTP " + response.statusCode() + ") " + msg,
+                                        null
+                                ))
+                )
                 .bodyToFlux(DataBuffer.class);
 
         try (AsynchronousFileChannel channel = AsynchronousFileChannel.open(
                 targetPath,
                 StandardOpenOption.CREATE,
-                StandardOpenOption.WRITE
+                StandardOpenOption.WRITE,
+                StandardOpenOption.TRUNCATE_EXISTING
         )) {
             DataBufferUtils.write(body, channel)
                     .doOnError(ex -> log.error("Failed to download {}", fileName, ex))
                     .then()
                     .block();
         } catch (IOException e) {
-            throw new IllegalStateException("Failed to open file channel for: " + targetPath, e);
+            throw new StaticGtfsDownloadException("Failed to open file channel for: " + targetPath, e);
+        } catch (RuntimeException e) {
+            throw new StaticGtfsDownloadException("Failed to download file: " + fileName, e);
         }
     }
 
@@ -85,7 +98,7 @@ public class StaticGtfsClient {
         try {
             Files.createDirectories(Path.of(dataDir));
         } catch (IOException e) {
-            throw new IllegalStateException("Failed to create data directory: " + dataDir, e);
+            throw new StaticGtfsDownloadException("Failed to create data directory: " + dataDir, e);
         }
     }
 }

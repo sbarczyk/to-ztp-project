@@ -13,6 +13,17 @@ import java.util.NoSuchElementException;
 @Slf4j
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler({
+            StaticGtfsDownloadException.class,
+            StaticGtfsExtractException.class
+    })
+    public ResponseEntity<String> handleStaticGtfsErrors(StaticGtfsException ex) {
+        log.error("Static GTFS error occurred: {}", ex.getMessage(), ex);
+        return ResponseEntity
+                .status(HttpStatus.BAD_GATEWAY)
+                .body("Static GTFS error: " + ex.getMessage());
+    }
+
     /**
      * Handles exceptions related to business logic and missing data
      * (e.g. no trips, no stops, no departure time).
@@ -22,7 +33,7 @@ public class GlobalExceptionHandler {
             NoSuchElementException.class
     })
     public ResponseEntity<String> handleLogicExceptions(RuntimeException ex) {
-        log.error("Logic error occurred: {}", ex.getMessage());
+        log.error("Logic error occurred: {}", ex.getMessage(), ex);
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body("Internal Server Error: " + ex.getMessage());
@@ -33,7 +44,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(InvalidProtocolBufferException.class)
     public ResponseEntity<String> handleParsingException(InvalidProtocolBufferException ex) {
-        log.error("Parsing error occurred: {}", ex.getMessage());
+        log.error("Parsing error occurred: {}", ex.getMessage(), ex);
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body("Internal Server Error: Data parsing failed.");
