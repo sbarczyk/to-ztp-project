@@ -1,10 +1,15 @@
 package pl.edu.agh.to.model;
 
-import lombok.Value;
+import jakarta.persistence.*;
+import lombok.*;
 
-@Value
+@Entity
+@Table(name = "trips")
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor
 public class Trip {
-    String routeId;
-    String serviceId;
-    String tripId;
+    @Id
+    private String tripId; // trip_id
+
+    private String routeId;
+    private String serviceId;
 }

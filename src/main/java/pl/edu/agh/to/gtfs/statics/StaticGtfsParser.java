@@ -39,13 +39,43 @@ public class StaticGtfsParser {
     public List<Trip> parseTrips(Path path) throws IOException {
         List<Trip> list = new ArrayList<>();
         try (BufferedReader br = Files.newBufferedReader(path)) {
-            br.readLine();
+            // 1. Odczytaj nagłówek, żeby znaleźć indeksy kolumn
+            String headerLine = br.readLine();
+            if (headerLine == null) return list;
+
+            if (headerLine.startsWith("\uFEFF")) {
+                headerLine = headerLine.substring(1);
+            }
+
+            String[] headers = parseLine(headerLine);
+            int tripIdx = -1;
+            int routeIdx = -1;
+            int serviceIdx = -1;
+
+            // Szukamy, na której pozycji są poszczególne kolumny
+            for (int i = 0; i < headers.length; i++) {
+                if (headers[i].equalsIgnoreCase("trip_id")) tripIdx = i;
+                if (headers[i].equalsIgnoreCase("route_id")) routeIdx = i;
+                if (headers[i].equalsIgnoreCase("service_id")) serviceIdx = i;
+            }
+
+            // Zabezpieczenie, gdyby plik był uszkodzony
+            if (tripIdx == -1 || routeIdx == -1 || serviceIdx == -1) {
+                throw new IOException("Brak wymaganych kolumn w pliku: " + path);
+            }
+
+            // 2. Czytamy dane używając wykrytych indeksów
             String line;
             while ((line = br.readLine()) != null) {
                 String[] p = parseLine(line);
 
-
-                list.add(new Trip(p[1], p[2], p[0]));
+                // Konstruktor Trip(tripId, routeId, serviceId)
+                // Pobieramy dane z dynamicznie znalezionych kolumn
+                list.add(new Trip(
+                        p[tripIdx],   // Tu zawsze trafi trip_id, niezależnie gdzie jest w pliku
+                        p[routeIdx],  // Tu route_id
+                        p[serviceIdx] // Tu service_id
+                ));
             }
         }
         return list;

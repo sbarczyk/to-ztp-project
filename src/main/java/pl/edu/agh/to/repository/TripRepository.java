@@ -1,0 +1,23 @@
+package pl.edu.agh.to.repository;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
+import pl.edu.agh.to.model.Trip;
+import java.util.List;
+
+@Repository
+public interface TripRepository extends JpaRepository<Trip, String> {
+
+    // Znajdź tripy, które mają przystanek startowy ORAZ końcowy,
+    // gdzie sekwencja startowa < sekwencja końcowa.
+    @Query("""
+        SELECT t FROM Trip t
+        JOIN StopTime stStart ON t.tripId = stStart.tripId
+        JOIN StopTime stEnd ON t.tripId = stEnd.tripId
+        WHERE stStart.stopId IN :startStopIds
+          AND stEnd.stopId IN :endStopIds
+          AND stStart.stopSequence < stEnd.stopSequence
+    """)
+    List<Trip> findDirectConnections(List<String> startStopIds, List<String> endStopIds);
+}

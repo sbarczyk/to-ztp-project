@@ -2,130 +2,107 @@ package pl.edu.agh.to.gtfs.statics;
 
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import pl.edu.agh.to.exceptions.StaticGtfsExtractException;
-import pl.edu.agh.to.model.CalendarDate;
-import pl.edu.agh.to.model.Stop;
-import pl.edu.agh.to.model.StopTime;
-import pl.edu.agh.to.model.Trip;
+import org.springframework.transaction.annotation.Transactional;
+import pl.edu.agh.to.model.*;
 import pl.edu.agh.to.model.Calendar;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.*;
+import pl.edu.agh.to.repository.*;
 
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
+
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class StaticGtfsService {
 
     private final StaticGtfsClient staticGtfsClient;
     private final GtfsZipExtractor zipExtractor;
+    private final StaticGtfsParser parser;
 
-    @Value("#{'${ztp.gtfs.static.files}'.split(',')}")
-    private List<String> staticFiles;
+    // Repozytoria
+    private final StopRepository stopRepository;
+    private final TripRepository tripRepository;
+    private final StopTimeRepository stopTimeRepository;
+    private final CalendarRepository calendarRepository;
+    private final CalendarDateRepository calendarDateRepository;
 
     @Value("${ztp.gtfs.data-dir:data}")
     private String dataDir;
 
-    private final StaticGtfsParser parser;
+    @PostConstruct
+    @Transactional
+    public void init() {
+        // 1. Sprawdź cache - jeśli baza ma dane, nie ładuj ponownie
+        if (stopRepository.count() > 0) {
+            log.info("Dane GTFS znalezione w bazie PostgreSQL. Pomijam ładowanie.");
+            return;
+        }
 
-    public Map<String, List<Stop>> stopsByName = new HashMap<>();
-    public Map<String, Trip> tripsById = new HashMap<>();
-    public Map<String, List<StopTime>> stopTimesByTripId = new HashMap<>();
-    public Map<String, List<CalendarDate>> calendarDatesByServiceId = new HashMap<>();
-    public Map<String, Calendar> calendarsByServiceId = new HashMap<>();
+        log.info("Baza pusta. Rozpoczynam pobieranie i import WSZYSTKICH danych GTFS...");
 
-    public Map<String, Path> downloadAndExtractAll() {
+        // 2. Pobierz wszystkie pliki ZIP zdefiniowane w application.properties
         Map<String, Path> downloaded = staticGtfsClient.downloadAllZipsToDisk();
 
-        Map<String, Path> extractedRoots = new LinkedHashMap<>();
-        Path extractedBase = Path.of(dataDir, "extracted");
+        // 3. Iteruj po każdym pobranym pliku (A, M, T)
+        for (Map.Entry<String, Path> entry : downloaded.entrySet()) {
+            String zipFileName = entry.getKey(); // np. GTFS_KRK_A.zip
+            Path zipPath = entry.getValue();
 
-        for (String rawName : staticFiles) {
-            String fileName = rawName.trim();
+            // Tworzymy nazwę folderu bez ".zip", np. "GTFS_KRK_A"
+            String folderName = zipFileName.replace(".zip", "");
+            Path targetDir = Path.of(dataDir, "extracted", folderName);
 
-            Path zipPath = downloaded.getOrDefault(fileName, Path.of(dataDir, fileName));
-            if (!Files.exists(zipPath)) {
-                throw new StaticGtfsExtractException("Zip file not found: " + zipPath);
-            }
+            log.info("--> Przetwarzanie zbioru: {}", folderName);
 
-            String datasetKey = datasetKeyFromFileName(fileName);
-            Path targetDir = extractedBase.resolve(datasetKey);
+            // Wypakuj
+            zipExtractor.extractZipToDirectory(zipPath, targetDir);
 
+            // Załaduj do bazy
             try {
-                zipExtractor.extractZipToDirectory(zipPath, targetDir);
-            } catch (RuntimeException e) {
-                throw new StaticGtfsExtractException(
-                        "Failed to extract dataset " + datasetKey + " from " + zipPath,
-                        e
-                );
-            }
-
-            extractedRoots.put(datasetKey, targetDir);
-        }
-
-        return extractedRoots;
-    }
-
-    private static String datasetKeyFromFileName(String fileName) {
-        int underscore = fileName.lastIndexOf('_');
-        int dot = fileName.lastIndexOf('.');
-        if (underscore < 0 || dot < 0 || underscore + 1 >= dot) {
-            throw new StaticGtfsExtractException("Unexpected static GTFS file name: " + fileName);
-        }
-        return fileName.substring(underscore + 1, dot);
-    }
-
-
-
-    @PostConstruct
-    public void init() {
-        Map<String, Path> paths = downloadAndExtractAll();
-
-        for (Path root : paths.values()) {
-            try {
-                System.out.println("Loading data from directory: " + root);
-
-                List<Stop> stops = parser.parseStops(root.resolve("stops.txt"));
-                stops.forEach(s ->
-                        stopsByName.computeIfAbsent(s.getName(), k -> new ArrayList<>()).add(s)
-                );
-
-
-                System.out.println("Loaded " + stopsByName.size() + " stops.");
-                if (stopsByName.size() > 0) {
-                    System.out.println("Example keys in the map: " +
-                            stopsByName.keySet().stream().limit(3).toList());
-                }
-
-                List<Trip> trips = parser.parseTrips(root.resolve("trips.txt"));
-                trips.forEach(t -> tripsById.put(t.getTripId(), t));
-
-                List<StopTime> stopTimes = parser.parseStopTimes(root.resolve("stop_times.txt"));
-                stopTimes.forEach(st ->
-                        stopTimesByTripId.computeIfAbsent(st.getTripId(), k -> new ArrayList<>()).add(st)
-                );
-
-                Path calendarPath = root.resolve("calendar.txt");
-                if (Files.exists(calendarPath)) {
-                    List<pl.edu.agh.to.model.Calendar> calendars = parser.parseCalendar(calendarPath);
-                    calendars.forEach(c -> calendarsByServiceId.put(c.getServiceId(), c));
-                }
-
-                Path calendarDatesPath = root.resolve("calendar_dates.txt");
-                if (Files.exists(calendarDatesPath)) {
-                    List<CalendarDate> dates = parser.parseCalendarDates(calendarDatesPath);
-                    dates.forEach(cd ->
-                            calendarDatesByServiceId.computeIfAbsent(cd.getServiceId(), k -> new ArrayList<>()).add(cd)
-                    );
-                }
-
+                loadDataToDb(targetDir, folderName);
             } catch (IOException e) {
-                System.err.println("Error loading data " + root + ": " + e.getMessage());
+                log.error("Błąd podczas importu zbioru " + folderName, e);
             }
         }
 
-        System.out.println("Finished loading data.");
+        log.info("=== ZAKOŃCZONO CAŁKOWITY IMPORT DANYCH DO BAZY ===");
+    }
+
+    private void loadDataToDb(Path dir, String datasetName) throws IOException {
+        log.info("[{}] Importowanie PRZYSTANKÓW...", datasetName);
+        List<Stop> stops = parser.parseStops(dir.resolve("stops.txt"));
+        stopRepository.saveAll(stops);
+
+        log.info("[{}] Importowanie KALENDARZA...", datasetName);
+        List<Calendar> calendars = parser.parseCalendar(dir.resolve("calendar.txt"));
+        calendarRepository.saveAll(calendars);
+
+        log.info("[{}] Importowanie WYJĄTKÓW KALENDARZA...", datasetName);
+        List<CalendarDate> dates = parser.parseCalendarDates(dir.resolve("calendar_dates.txt"));
+        calendarDateRepository.saveAll(dates);
+
+        log.info("[{}] Importowanie KURSÓW (Trips)...", datasetName);
+        List<Trip> trips = parser.parseTrips(dir.resolve("trips.txt"));
+        tripRepository.saveAll(trips);
+
+        log.info("[{}] Importowanie CZASÓW (StopTimes) - to potrwa...", datasetName);
+        List<StopTime> stopTimes = parser.parseStopTimes(dir.resolve("stop_times.txt"));
+
+        // Batch insert dla wydajności
+        int batchSize = 10000;
+        for (int i = 0; i < stopTimes.size(); i += batchSize) {
+            int end = Math.min(i + batchSize, stopTimes.size());
+            stopTimeRepository.saveAll(stopTimes.subList(i, end));
+
+            if (i % 50000 == 0) {
+                log.info("[{}] Zapisano {} / {} czasów...", datasetName, i, stopTimes.size());
+            }
+        }
+        log.info("[{}] Zakończono import tego zbioru.", datasetName);
     }
 }

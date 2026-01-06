@@ -1,105 +1,123 @@
 package pl.edu.agh.to.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import pl.edu.agh.to.gtfs.statics.StaticGtfsService;
+import org.springframework.transaction.annotation.Transactional;
 import pl.edu.agh.to.model.*;
-import pl.edu.agh.to.model.Calendar; // Twój model
+import pl.edu.agh.to.repository.*;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RouteService {
 
-    private final StaticGtfsService staticData;
+    // Wstrzykujemy Repozytoria
+    private final StopRepository stopRepository;
+    private final TripRepository tripRepository;
+    private final StopTimeRepository stopTimeRepository;
+    private final CalendarRepository calendarRepository;
+    private final CalendarDateRepository calendarDateRepository;
+
     private final RandomDepartureService realtimeData;
 
+    @Transactional(readOnly = true) // Przyspiesza odczyt z bazy
     public RouteSearchResult findFastestConnection(String startName, String endName) {
-        List<Stop> startStops = staticData.stopsByName.get(startName);
-        List<Stop> endStops = staticData.stopsByName.get(endName);
+        log.info("Szukam trasy PostgreSQL: {} -> {}", startName, endName);
 
-        if (startStops == null || endStops == null) {
-            throw new IllegalArgumentException("Unknown stop: " +
-                    (startStops == null ? startName : endName));
+        // 1. Pobierz ID przystanków (jeden przystanek = wiele słupków/ID)
+        List<String> startIds = stopRepository.findByName(startName)
+                .stream().map(Stop::getId).toList();
+        List<String> endIds = stopRepository.findByName(endName)
+                .stream().map(Stop::getId).toList();
+
+        if (startIds.isEmpty() || endIds.isEmpty()) {
+            throw new IllegalArgumentException("Nie znaleziono przystanku o podanej nazwie.");
         }
 
-        Set<String> startIds = startStops.stream().map(Stop::getId).collect(Collectors.toSet());
-        Set<String> endIds = endStops.stream().map(Stop::getId).collect(Collectors.toSet());
+        // 2. MAGICZNE ZAPYTANIE SQL
+        // Baza sama znajduje Tripy, które przejeżdżają przez Start i Koniec w dobrej kolejności
+        List<Trip> matchingTrips = tripRepository.findDirectConnections(startIds, endIds);
 
-        LocalDate today = LocalDate.now();
-        LocalTime now = LocalTime.now();
+        log.info("Baza znalazła {} pasujących kursów (linii).", matchingTrips.size());
 
-        System.out.println("Searching route: " + startName + " -> " + endName);
-
-        Map<String, Long> currentDelays = realtimeData.getCurrentDelays();
         List<RouteSearchResult> candidates = new ArrayList<>();
 
-        for (Map.Entry<String, List<StopTime>> entry : staticData.stopTimesByTripId.entrySet()) {
-            String tripId = entry.getKey();
-            List<StopTime> schedule = entry.getValue();
+        // Parametry symulacji (możesz zmienić na LocalDate.now() jeśli dane są aktualne)
+        LocalDate today = LocalDate.now();
+//        LocalTime now = LocalTime.of(8, 0);
+        LocalTime now = LocalTime.now();
+
+        // Pobierz opóźnienia raz (zamiast w pętli)
+        Map<String, Long> currentDelays = realtimeData.getCurrentDelays();
+
+        for (Trip trip : matchingTrips) {
+            // 3. Sprawdź Kalendarz (czy kursuje dzisiaj?)
+            if (!isRunningToday(trip.getServiceId(), today)) {
+                continue;
+            }
+
+            // 4. Pobierz czasy dla tego konkretnego kursu
+            // Używamy repozytorium, aby pobrać tylko czasy dla tego jednego Tripa
+            List<StopTime> times = stopTimeRepository.findByTripIdOrderByStopSequence(trip.getTripId());
 
             StopTime startInfo = null;
             StopTime endInfo = null;
 
-            for (StopTime st : schedule) {
+            // Znajdź właściwe przystanki w liście
+            for (StopTime st : times) {
                 if (startIds.contains(st.getStopId())) startInfo = st;
                 if (endIds.contains(st.getStopId())) endInfo = st;
             }
 
-            if (startInfo != null && endInfo != null && endInfo.getStopSequence() > startInfo.getStopSequence()) {
+            if (startInfo != null && endInfo != null) {
+                long delay = currentDelays.getOrDefault(trip.getTripId(), 0L);
+                LocalTime realDeparture = startInfo.getDepartureTime().plusSeconds(delay);
+                LocalTime realArrival = endInfo.getArrivalTime().plusSeconds(delay);
 
-                Trip trip = staticData.tripsById.get(tripId);
-
-                if (trip == null) {
-                    continue;
-                }
-
-                if (isRunningToday(trip.getServiceId(), today)) {
-                    long delay = currentDelays.getOrDefault(tripId, 0L);
-                    LocalTime realDeparture = startInfo.getDepartureTime().plusSeconds(delay);
-                    LocalTime realArrival = endInfo.getArrivalTime().plusSeconds(delay);
-
-                    if (realDeparture.isAfter(now)) {
-                        candidates.add(RouteSearchResult.builder()
-                                .startStop(startName)
-                                .endStop(endName)
-                                .tripId(tripId)
-                                .routeId(trip.getRouteId())
-                                .departureTime(realDeparture)
-                                .arrivalTime(realArrival)
-                                .delayInSeconds(delay)
-                                .build());
-                    }
+                // Sprawdź czy autobus już nie odjechał
+                if (realDeparture.isAfter(now)) {
+                    candidates.add(RouteSearchResult.builder()
+                            .startStop(startName)
+                            .endStop(endName)
+                            .tripId(trip.getTripId())
+                            .routeId(trip.getRouteId())
+                            .departureTime(realDeparture)
+                            .arrivalTime(realArrival)
+                            .delayInSeconds(delay)
+                            .build());
                 }
             }
         }
 
         return candidates.stream()
                 .min(Comparator.comparing(RouteSearchResult::getArrivalTime))
-                .orElseThrow(() -> new RuntimeException("No direct connections!"));
+                .orElseThrow(() -> new RuntimeException("Brak połączeń bezpośrednich o tej porze."));
     }
 
+    // W pliku RouteService.java
+
     private boolean isRunningToday(String serviceId, LocalDate date) {
-        if (staticData.calendarDatesByServiceId.containsKey(serviceId)) {
-            List<CalendarDate> exceptions = staticData.calendarDatesByServiceId.get(serviceId);
-            for (CalendarDate cd : exceptions) {
-                if (cd.getDate().equals(date)) {
-                    return cd.getExceptionType() == 1;
-                }
-            }
+        // A. Wyjątki (calendar_dates) - Pobieramy listę
+        List<CalendarDate> exceptions = calendarDateRepository.findByServiceIdAndDate(serviceId, date);
+
+        if (!exceptions.isEmpty()) {
+            // Jeśli znaleziono jakiekolwiek wyjątki, bierzemy pierwszy z nich
+            // (zakładamy, że jeśli są dwa, to mówią to samo)
+            return exceptions.get(0).getExceptionType() == 1;
         }
 
-        Calendar cal = staticData.calendarsByServiceId.get(serviceId);
-        if (cal == null) return false;
-
-        if (date.isBefore(cal.getStartDate()) || date.isAfter(cal.getEndDate())) {
-            return false;
-        }
-
-        return cal.getOperatingDays().contains(date.getDayOfWeek());
+        // B. Kalendarz regularny (bez zmian)
+        return calendarRepository.findById(serviceId)
+                .map(cal -> {
+                    if (date.isBefore(cal.getStartDate()) || date.isAfter(cal.getEndDate())) return false;
+                    return cal.getOperatingDays().contains(date.getDayOfWeek());
+                })
+                .orElse(false);
     }
 }

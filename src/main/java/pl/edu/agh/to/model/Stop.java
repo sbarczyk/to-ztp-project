@@ -1,11 +1,16 @@
 package pl.edu.agh.to.model;
 
-import lombok.Value;
+import jakarta.persistence.*;
+import lombok.*;
 
-@Value
+@Entity // <-- To jest teraz tabela w bazie
+@Table(name = "stops")
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor
 public class Stop {
-    String id;
-    String name;
-    double lat;
-    double lon;
+    @Id
+    private String id; // stop_id (klucz główny)
+
+    private String name;
+    private double lat;
+    private double lon;
 }
