@@ -15,6 +15,8 @@ import java.nio.channels.AsynchronousFileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.FileTime;
+import java.time.Instant;
 
 @Slf4j
 @Service
@@ -32,64 +34,55 @@ public class StaticGtfsClient {
     @Value("${ztp.gtfs.data-dir}")
     private String dataDir;
 
-    public Path downloadZipToDisk() {
-        ensureDataDirExists();
-
-        String fileName = staticFile.trim();
-        Path targetPath = Path.of(dataDir, fileName);
-
-        downloadSingleZipToDisk(fileName, targetPath);
-        log.info("Saved {} to {}", fileName, targetPath.toAbsolutePath());
-
-        return targetPath;
+    public Instant getRemoteLastModified() {
+        log.info("Checking remote metadata for: {}/{}", baseUrl, staticFile);
+        try {
+            return webClient.head()
+                    .uri("/" + staticFile)
+                    .retrieve()
+                    .toBodilessEntity()
+                    .map(response -> {
+                        long lastMod = response.getHeaders().getLastModified();
+                        return lastMod != -1 ? Instant.ofEpochMilli(lastMod) : Instant.now();
+                    })
+                    .block();
+        } catch (Exception e) {
+            log.error("Failed to fetch remote metadata: {}", e.getMessage());
+            return Instant.MIN;
+        }
     }
 
-    private void downloadSingleZipToDisk(String fileName, Path targetPath) {
-        String url = baseUrl + "/" + fileName;
-        log.info("Downloading GTFS Static zip from {}", url);
+    public Path downloadZipToDisk(Instant remoteTimestamp) {
+        ensureDataDirExists();
+        Path targetPath = Path.of(dataDir, staticFile.trim());
+        log.info("Starting download of {} to {}", staticFile, targetPath.toAbsolutePath());
 
         try {
             Files.deleteIfExists(targetPath);
-        } catch (IOException e) {
-            throw new StaticGtfsDownloadException("Failed to delete existing file: " + targetPath, e);
-        }
+            Flux<DataBuffer> body = webClient.get()
+                    .uri("/" + staticFile.trim())
+                    .retrieve()
+                    .bodyToFlux(DataBuffer.class);
 
-        Flux<DataBuffer> body = webClient.get()
-                .uri(url)
-                .retrieve()
-                .onStatus(
-                        status -> status.is4xxClientError() || status.is5xxServerError(),
-                        response -> response.bodyToMono(String.class)
-                                .defaultIfEmpty("")
-                                .map(msg -> new StaticGtfsDownloadException(
-                                        "Failed to download " + fileName + " (HTTP " + response.statusCode() + ") " + msg,
-                                        null
-                                ))
-                )
-                .bodyToFlux(DataBuffer.class);
+            try (AsynchronousFileChannel channel = AsynchronousFileChannel.open(
+                    targetPath, StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)) {
+                DataBufferUtils.write(body, channel).then().block();
+            }
 
-        try (AsynchronousFileChannel channel = AsynchronousFileChannel.open(
-                targetPath,
-                StandardOpenOption.CREATE,
-                StandardOpenOption.WRITE,
-                StandardOpenOption.TRUNCATE_EXISTING
-        )) {
-            DataBufferUtils.write(body, channel)
-                    .doOnError(ex -> log.error("Failed to download {}", fileName, ex))
-                    .then()
-                    .block();
+            Files.setLastModifiedTime(targetPath, FileTime.from(remoteTimestamp));
+            log.info("Download completed and timestamp synced: {}", remoteTimestamp);
+
         } catch (IOException e) {
-            throw new StaticGtfsDownloadException("Failed to open file channel for: " + targetPath, e);
-        } catch (RuntimeException e) {
-            throw new StaticGtfsDownloadException("Failed to download file: " + fileName, e);
+            throw new StaticGtfsDownloadException("Download or sync failed", e);
         }
+        return targetPath;
     }
 
     private void ensureDataDirExists() {
         try {
             Files.createDirectories(Path.of(dataDir));
         } catch (IOException e) {
-            throw new StaticGtfsDownloadException("Failed to create data directory: " + dataDir, e);
+            throw new StaticGtfsDownloadException("Directory error", e);
         }
     }
 }

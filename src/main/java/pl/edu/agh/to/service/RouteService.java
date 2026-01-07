@@ -4,120 +4,91 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import pl.edu.agh.to.model.*;
-import pl.edu.agh.to.repository.*;
+import pl.edu.agh.to.gtfs.realtime.GtfsDelayService;
+import pl.edu.agh.to.model.CalendarDate;
+import pl.edu.agh.to.model.Route;
+import pl.edu.agh.to.model.RouteSearchResult;
+import pl.edu.agh.to.model.Stop;
+import pl.edu.agh.to.model.StopTime;
+import pl.edu.agh.to.model.Trip;
+import pl.edu.agh.to.repository.CalendarDateRepository;
+import pl.edu.agh.to.repository.CalendarRepository;
+import pl.edu.agh.to.repository.StopRepository;
+import pl.edu.agh.to.repository.TripRepository;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class RouteService {
 
-    // Wstrzykujemy Repozytoria
     private final StopRepository stopRepository;
     private final TripRepository tripRepository;
-    private final StopTimeRepository stopTimeRepository;
     private final CalendarRepository calendarRepository;
     private final CalendarDateRepository calendarDateRepository;
+    private final GtfsDelayService delayService;
 
-    private final RandomDepartureService realtimeData;
-
-    @Transactional(readOnly = true) // Przyspiesza odczyt z bazy
+    @Transactional(readOnly = true)
     public RouteSearchResult findFastestConnection(String startName, String endName) {
-        log.info("Szukam trasy PostgreSQL: {} -> {}", startName, endName);
+        log.info("Searching fastest route: {} -> {}", startName, endName);
 
-        // 1. Pobierz ID przystanków (jeden przystanek = wiele słupków/ID)
-        List<String> startIds = stopRepository.findByName(startName)
-                .stream().map(Stop::getId).toList();
-        List<String> endIds = stopRepository.findByName(endName)
-                .stream().map(Stop::getId).toList();
+        List<String> startIds = stopRepository.findByName(startName).stream().map(Stop::getId).toList();
+        List<String> endIds = stopRepository.findByName(endName).stream().map(Stop::getId).toList();
 
         if (startIds.isEmpty() || endIds.isEmpty()) {
-            throw new IllegalArgumentException("Nie znaleziono przystanku o podanej nazwie.");
+            throw new IllegalArgumentException("Stops not found: " + startName + "/" + endName);
         }
 
-        // 2. MAGICZNE ZAPYTANIE SQL
-        // Baza sama znajduje Tripy, które przejeżdżają przez Start i Koniec w dobrej kolejności
-        List<Trip> matchingTrips = tripRepository.findDirectConnections(startIds, endIds);
-
-        log.info("Baza znalazła {} pasujących kursów (linii).", matchingTrips.size());
+        List<Object[]> results = tripRepository.findDirectConnectionsWithDetails(startIds, endIds);
+        Map<String, Long> delays = delayService.getCurrentDelays();
+        LocalDate today = LocalDate.now();
+        LocalTime now = LocalTime.now();
 
         List<RouteSearchResult> candidates = new ArrayList<>();
 
-        // Parametry symulacji (możesz zmienić na LocalDate.now() jeśli dane są aktualne)
-        LocalDate today = LocalDate.now();
-//        LocalTime now = LocalTime.of(8, 0);
-        LocalTime now = LocalTime.now();
+        for (Object[] row : results) {
+            Trip trip = (Trip) row[0];
+            StopTime stStart = (StopTime) row[1];
+            StopTime stEnd = (StopTime) row[2];
+            Route route = (Route) row[3];
 
-        // Pobierz opóźnienia raz (zamiast w pętli)
-        Map<String, Long> currentDelays = realtimeData.getCurrentDelays();
+            if (!isTripOperating(trip.getServiceId(), today)) continue;
 
-        for (Trip trip : matchingTrips) {
-            // 3. Sprawdź Kalendarz (czy kursuje dzisiaj?)
-            if (!isRunningToday(trip.getServiceId(), today)) {
-                continue;
-            }
+            long delay = delays.getOrDefault(trip.getTripId(), 0L);
+            LocalTime realDeparture = stStart.getDepartureTime().plusSeconds(delay);
+            LocalTime realArrival = stEnd.getArrivalTime().plusSeconds(delay);
 
-            // 4. Pobierz czasy dla tego konkretnego kursu
-            // Używamy repozytorium, aby pobrać tylko czasy dla tego jednego Tripa
-            List<StopTime> times = stopTimeRepository.findByTripIdOrderByStopSequence(trip.getTripId());
+            if (realDeparture.isAfter(now)) {
+                String displayName = (route != null) ? route.getRouteShortName() : "ID:" + trip.getRouteId();
 
-            StopTime startInfo = null;
-            StopTime endInfo = null;
-
-            // Znajdź właściwe przystanki w liście
-            for (StopTime st : times) {
-                if (startIds.contains(st.getStopId())) startInfo = st;
-                if (endIds.contains(st.getStopId())) endInfo = st;
-            }
-
-            if (startInfo != null && endInfo != null) {
-                long delay = currentDelays.getOrDefault(trip.getTripId(), 0L);
-                LocalTime realDeparture = startInfo.getDepartureTime().plusSeconds(delay);
-                LocalTime realArrival = endInfo.getArrivalTime().plusSeconds(delay);
-
-                // Sprawdź czy autobus już nie odjechał
-                if (realDeparture.isAfter(now)) {
-                    candidates.add(RouteSearchResult.builder()
-                            .startStop(startName)
-                            .endStop(endName)
-                            .tripId(trip.getTripId())
-                            .routeId(trip.getRouteId())
-                            .departureTime(realDeparture)
-                            .arrivalTime(realArrival)
-                            .delayInSeconds(delay)
-                            .build());
-                }
+                candidates.add(RouteSearchResult.builder()
+                        .startStop(startName).endStop(endName)
+                        .tripId(trip.getTripId()).routeId(trip.getRouteId())
+                        .routeShortName(displayName)
+                        .departureTime(realDeparture).arrivalTime(realArrival)
+                        .delayInSeconds(delay).build());
             }
         }
 
         return candidates.stream()
                 .min(Comparator.comparing(RouteSearchResult::getArrivalTime))
-                .orElseThrow(() -> new RuntimeException("Brak połączeń bezpośrednich o tej porze."));
+                .orElseThrow(() -> new NoSuchElementException("No direct connections available for today."));
     }
 
-    // W pliku RouteService.java
-
-    private boolean isRunningToday(String serviceId, LocalDate date) {
-        // A. Wyjątki (calendar_dates) - Pobieramy listę
+    private boolean isTripOperating(String serviceId, LocalDate date) {
         List<CalendarDate> exceptions = calendarDateRepository.findByServiceIdAndDate(serviceId, date);
+        if (!exceptions.isEmpty()) return exceptions.get(0).getExceptionType() == 1;
 
-        if (!exceptions.isEmpty()) {
-            // Jeśli znaleziono jakiekolwiek wyjątki, bierzemy pierwszy z nich
-            // (zakładamy, że jeśli są dwa, to mówią to samo)
-            return exceptions.get(0).getExceptionType() == 1;
-        }
-
-        // B. Kalendarz regularny (bez zmian)
         return calendarRepository.findById(serviceId)
-                .map(cal -> {
-                    if (date.isBefore(cal.getStartDate()) || date.isAfter(cal.getEndDate())) return false;
-                    return cal.getOperatingDays().contains(date.getDayOfWeek());
-                })
+                .map(cal -> !date.isBefore(cal.getStartDate()) && !date.isAfter(cal.getEndDate())
+                        && cal.getOperatingDays().contains(date.getDayOfWeek()))
                 .orElse(false);
     }
 }
