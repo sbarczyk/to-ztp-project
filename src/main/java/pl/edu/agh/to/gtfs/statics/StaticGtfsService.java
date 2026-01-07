@@ -13,7 +13,6 @@ import pl.edu.agh.to.repository.*;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @Service
@@ -34,6 +33,9 @@ public class StaticGtfsService {
     @Value("${ztp.gtfs.data-dir:data}")
     private String dataDir;
 
+    @Value("${ztp.gtfs.static.file}")
+    private String staticFile;
+
     @PostConstruct
     @Transactional
     public void init() {
@@ -45,29 +47,22 @@ public class StaticGtfsService {
 
         log.info("Baza pusta. Rozpoczynam pobieranie i import WSZYSTKICH danych GTFS...");
 
-        // 2. Pobierz wszystkie pliki ZIP zdefiniowane w application.properties
-        Map<String, Path> downloaded = staticGtfsClient.downloadAllZipsToDisk();
+        // 2. Pobierz plik ZIP zdefiniowany w application.properties
+        Path zipPath = staticGtfsClient.downloadZipToDisk();
 
-        // 3. Iteruj po każdym pobranym pliku (A, M, T)
-        for (Map.Entry<String, Path> entry : downloaded.entrySet()) {
-            String zipFileName = entry.getKey(); // np. GTFS_KRK_A.zip
-            Path zipPath = entry.getValue();
+        // 3. Wypakuj do stałego katalogu
+        String datasetName = staticFile.replace(".zip", "");
+        Path targetDir = Path.of(dataDir, "extracted", datasetName);
 
-            // Tworzymy nazwę folderu bez ".zip", np. "GTFS_KRK_A"
-            String folderName = zipFileName.replace(".zip", "");
-            Path targetDir = Path.of(dataDir, "extracted", folderName);
+        log.info("--> Przetwarzanie zbioru: {}", datasetName);
 
-            log.info("--> Przetwarzanie zbioru: {}", folderName);
+        zipExtractor.extractZipToDirectory(zipPath, targetDir);
 
-            // Wypakuj
-            zipExtractor.extractZipToDirectory(zipPath, targetDir);
-
-            // Załaduj do bazy
-            try {
-                loadDataToDb(targetDir, folderName);
-            } catch (IOException e) {
-                log.error("Błąd podczas importu zbioru " + folderName, e);
-            }
+        // 4. Załaduj do bazy
+        try {
+            loadDataToDb(targetDir, datasetName);
+        } catch (IOException e) {
+            log.error("Błąd podczas importu zbioru {}", datasetName, e);
         }
 
         log.info("=== ZAKOŃCZONO CAŁKOWITY IMPORT DANYCH DO BAZY ===");

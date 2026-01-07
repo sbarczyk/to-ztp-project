@@ -15,9 +15,6 @@ import java.nio.channels.AsynchronousFileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @Service
@@ -29,28 +26,22 @@ public class StaticGtfsClient {
     @Value("${ztp.gtfs.url}")
     private String baseUrl;
 
-    @Value("#{'${ztp.gtfs.static.files}'.split(',')}")
-    private List<String> staticFiles;
+    @Value("${ztp.gtfs.static.file}")
+    private String staticFile;
 
     @Value("${ztp.gtfs.data-dir}")
     private String dataDir;
 
-    public Map<String, Path> downloadAllZipsToDisk() {
+    public Path downloadZipToDisk() {
         ensureDataDirExists();
 
-        Map<String, Path> result = new LinkedHashMap<>();
+        String fileName = staticFile.trim();
+        Path targetPath = Path.of(dataDir, fileName);
 
-        for (String rawName : staticFiles) {
-            String fileName = rawName.trim();
-            Path targetPath = Path.of(dataDir, fileName);
+        downloadSingleZipToDisk(fileName, targetPath);
+        log.info("Saved {} to {}", fileName, targetPath.toAbsolutePath());
 
-            downloadSingleZipToDisk(fileName, targetPath);
-
-            result.put(fileName, targetPath);
-            log.info("Saved {} to {}", fileName, targetPath.toAbsolutePath());
-        }
-
-        return result;
+        return targetPath;
     }
 
     private void downloadSingleZipToDisk(String fileName, Path targetPath) {
