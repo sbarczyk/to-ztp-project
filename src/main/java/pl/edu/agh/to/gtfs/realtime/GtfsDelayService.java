@@ -10,6 +10,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Computes delays (seconds) per tripId from realtime feed.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -18,25 +21,28 @@ public class GtfsDelayService {
     private final GtfsClient gtfsClient;
     private final GtfsParser gtfsParser;
 
-    /**
-     * Fetches real-time trip updates and maps tripId to delay in seconds.
-     */
-    public Map<String, Long> getCurrentDelays() {
-        Map<String, Long> delays = new HashMap<>();
-        try {
-            byte[] data = gtfsClient.fetchTripUpdatesAsBytes();
-            List<GtfsRealtime.TripUpdate> updates = gtfsParser.parseTripUpdates(data);
+    public Map<String, Long> getCurrentDelays() throws InvalidProtocolBufferException {
+        byte[] data = gtfsClient.fetchTripUpdatesAsBytes();
+        List<GtfsRealtime.TripUpdate> updates = gtfsParser.parseTripUpdates(data);
 
-            for (GtfsRealtime.TripUpdate tu : updates) {
-                if (tu.hasTrip() && tu.getStopTimeUpdateCount() > 0) {
-                    String tripId = tu.getTrip().getTripId();
-                    long delay = tu.getStopTimeUpdate(0).getArrival().getDelay();
-                    delays.put(tripId, delay);
-                }
+        Map<String, Long> delays = new HashMap<>();
+        for (GtfsRealtime.TripUpdate tu : updates) {
+            if (!tu.hasTrip() || tu.getStopTimeUpdateCount() == 0) {
+                continue;
             }
-        } catch (InvalidProtocolBufferException e) {
-            log.error("Failed to parse GTFS Realtime data: {}", e.getMessage());
+
+            String tripId = tu.getTrip().getTripId();
+            long delay = 0L;
+
+            GtfsRealtime.TripUpdate.StopTimeUpdate first = tu.getStopTimeUpdate(0);
+            if (first.hasArrival() && first.getArrival().hasDelay()) {
+                delay = first.getArrival().getDelay();
+            }
+
+            delays.put(tripId, delay);
         }
+
+        log.debug("Computed delays for {} trips", delays.size());
         return delays;
     }
 }

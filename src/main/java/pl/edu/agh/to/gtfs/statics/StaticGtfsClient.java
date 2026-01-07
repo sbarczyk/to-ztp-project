@@ -2,11 +2,11 @@ package pl.edu.agh.to.gtfs.statics;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import pl.edu.agh.to.config.GtfsProperties;
 import pl.edu.agh.to.exceptions.StaticGtfsDownloadException;
 import reactor.core.publisher.Flux;
 
@@ -24,65 +24,66 @@ import java.time.Instant;
 public class StaticGtfsClient {
 
     private final WebClient webClient;
-
-    @Value("${ztp.gtfs.url}")
-    private String baseUrl;
-
-    @Value("${ztp.gtfs.static.file}")
-    private String staticFile;
-
-    @Value("${ztp.gtfs.data-dir}")
-    private String dataDir;
+    private final GtfsProperties props;
 
     public Instant getRemoteLastModified() {
-        log.info("Checking remote metadata for: {}/{}", baseUrl, staticFile);
+        String file = props.statics().file();
+        log.info("Checking remote Last-Modified for {}", file);
+
         try {
             return webClient.head()
-                    .uri("/" + staticFile)
+                    .uri("/" + file)
                     .retrieve()
                     .toBodilessEntity()
                     .map(response -> {
                         long lastMod = response.getHeaders().getLastModified();
-                        return lastMod != -1 ? Instant.ofEpochMilli(lastMod) : Instant.now();
+                        return lastMod > 0 ? Instant.ofEpochMilli(lastMod) : Instant.EPOCH;
                     })
                     .block();
-        } catch (Exception e) {
-            log.error("Failed to fetch remote metadata: {}", e.getMessage());
-            return Instant.MIN;
+        } catch (Exception ex) {
+            throw new StaticGtfsDownloadException("Failed to fetch remote metadata for " + file, ex);
         }
     }
 
     public Path downloadZipToDisk(Instant remoteTimestamp) {
         ensureDataDirExists();
-        Path targetPath = Path.of(dataDir, staticFile.trim());
-        log.info("Starting download of {} to {}", staticFile, targetPath.toAbsolutePath());
+
+        String file = props.statics().file().trim();
+        Path targetPath = Path.of(props.statics().dataDir(), file);
+
+        log.info("Downloading {} -> {}", file, targetPath.toAbsolutePath());
 
         try {
             Files.deleteIfExists(targetPath);
+
             Flux<DataBuffer> body = webClient.get()
-                    .uri("/" + staticFile.trim())
+                    .uri("/" + file)
                     .retrieve()
                     .bodyToFlux(DataBuffer.class);
 
             try (AsynchronousFileChannel channel = AsynchronousFileChannel.open(
-                    targetPath, StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)) {
+                    targetPath,
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.WRITE,
+                    StandardOpenOption.TRUNCATE_EXISTING
+            )) {
                 DataBufferUtils.write(body, channel).then().block();
             }
 
             Files.setLastModifiedTime(targetPath, FileTime.from(remoteTimestamp));
-            log.info("Download completed and timestamp synced: {}", remoteTimestamp);
+            log.info("Download completed (timestamp={})", remoteTimestamp);
+            return targetPath;
 
-        } catch (IOException e) {
-            throw new StaticGtfsDownloadException("Download or sync failed", e);
+        } catch (IOException ex) {
+            throw new StaticGtfsDownloadException("Failed to download GTFS zip to disk", ex);
         }
-        return targetPath;
     }
 
     private void ensureDataDirExists() {
         try {
-            Files.createDirectories(Path.of(dataDir));
-        } catch (IOException e) {
-            throw new StaticGtfsDownloadException("Directory error", e);
+            Files.createDirectories(Path.of(props.statics().dataDir()));
+        } catch (IOException ex) {
+            throw new StaticGtfsDownloadException("Failed to create data directory", ex);
         }
     }
 }

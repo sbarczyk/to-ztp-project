@@ -11,7 +11,5 @@ import java.util.Optional;
 @Repository
 public interface CalendarDateRepository extends JpaRepository<CalendarDate, Long> {
 
-    List<CalendarDate> findAllByServiceId(String serviceId);
-
     List<CalendarDate> findByServiceIdAndDate(String serviceId, LocalDate date);
 }
