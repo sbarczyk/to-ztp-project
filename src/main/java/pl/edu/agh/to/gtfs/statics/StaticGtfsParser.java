@@ -79,6 +79,19 @@ public class StaticGtfsParser {
         return list;
     }
 
+    public List<Route> parseRoutes(Path path) throws IOException {
+        List<Route> list = new ArrayList<>();
+        try (BufferedReader br = Files.newBufferedReader(path)) {
+            br.readLine(); // skip header
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] p = parseLine(line);
+                list.add(new Route(p[0], p[2], p[3], Integer.parseInt(p[4])));
+            }
+        }
+        return list;
+    }
+
 
 
     private String[] parseLine(String line) {
