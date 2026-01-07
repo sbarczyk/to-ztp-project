@@ -1,9 +1,12 @@
 package pl.edu.agh.to.service;
 
+import com.google.protobuf.InvalidProtocolBufferException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import pl.edu.agh.to.exceptions.BadRequestException;
+import pl.edu.agh.to.exceptions.NotFoundException;
 import pl.edu.agh.to.gtfs.realtime.GtfsDelayService;
 import pl.edu.agh.to.model.CalendarDate;
 import pl.edu.agh.to.model.Route;
@@ -22,7 +25,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 
 @Slf4j
 @Service
@@ -37,17 +39,31 @@ public class RouteService {
 
     @Transactional(readOnly = true)
     public RouteSearchResult findFastestConnection(String startName, String endName) {
-        log.info("Searching fastest route: {} -> {}", startName, endName);
+        String start = normalize(startName);
+        String end = normalize(endName);
 
-        List<String> startIds = stopRepository.findByName(startName).stream().map(Stop::getId).toList();
-        List<String> endIds = stopRepository.findByName(endName).stream().map(Stop::getId).toList();
+        log.info("Searching fastest direct connection: '{}' -> '{}'", start, end);
 
-        if (startIds.isEmpty() || endIds.isEmpty()) {
-            throw new IllegalArgumentException("Stops not found: " + startName + "/" + endName);
+        List<String> startIds = stopRepository.findByName(start).stream()
+                .map(Stop::getId)
+                .toList();
+        List<String> endIds = stopRepository.findByName(end).stream()
+                .map(Stop::getId)
+                .toList();
+
+        if (startIds.isEmpty()) {
+            throw new BadRequestException("Start stop not found: " + start);
+        }
+        if (endIds.isEmpty()) {
+            throw new BadRequestException("End stop not found: " + end);
         }
 
         List<Object[]> results = tripRepository.findDirectConnectionsWithDetails(startIds, endIds);
-        Map<String, Long> delays = delayService.getCurrentDelays();
+        if (results.isEmpty()) {
+            throw new NotFoundException("No direct connections found for given stops");
+        }
+
+        Map<String, Long> delays = fetchDelaysSafe();
         LocalDate today = LocalDate.now();
         LocalTime now = LocalTime.now();
 
@@ -59,36 +75,70 @@ public class RouteService {
             StopTime stEnd = (StopTime) row[2];
             Route route = (Route) row[3];
 
-            if (!isTripOperating(trip.getServiceId(), today)) continue;
+            if (!isTripOperating(trip.getServiceId(), today)) {
+                continue;
+            }
 
             long delay = delays.getOrDefault(trip.getTripId(), 0L);
+
             LocalTime realDeparture = stStart.getDepartureTime().plusSeconds(delay);
             LocalTime realArrival = stEnd.getArrivalTime().plusSeconds(delay);
 
-            if (realDeparture.isAfter(now)) {
-                String displayName = (route != null) ? route.getRouteShortName() : "ID:" + trip.getRouteId();
-
-                candidates.add(RouteSearchResult.builder()
-                        .startStop(startName).endStop(endName)
-                        .tripId(trip.getTripId()).routeId(trip.getRouteId())
-                        .routeShortName(displayName)
-                        .departureTime(realDeparture).arrivalTime(realArrival)
-                        .delayInSeconds(delay).build());
+            if (!realDeparture.isAfter(now)) {
+                continue;
             }
+
+            String displayName = (route != null && route.getRouteShortName() != null && !route.getRouteShortName().isBlank())
+                    ? route.getRouteShortName()
+                    : "ID:" + trip.getRouteId();
+
+            candidates.add(RouteSearchResult.builder()
+                    .startStop(start)
+                    .endStop(end)
+                    .tripId(trip.getTripId())
+                    .routeId(trip.getRouteId())
+                    .routeShortName(displayName)
+                    .departureTime(realDeparture)
+                    .arrivalTime(realArrival)
+                    .delayInSeconds(delay)
+                    .build());
         }
 
         return candidates.stream()
                 .min(Comparator.comparing(RouteSearchResult::getArrivalTime))
-                .orElseThrow(() -> new NoSuchElementException("No direct connections available for today."));
+                .orElseThrow(() -> new NotFoundException("No direct connections available for today"));
+    }
+
+    private Map<String, Long> fetchDelaysSafe() {
+        try {
+            return delayService.getCurrentDelays();
+        } catch (InvalidProtocolBufferException ex) {
+            log.warn("Delays unavailable due to protobuf parsing error: {}", ex.getMessage());
+            return Map.of();
+        }
     }
 
     private boolean isTripOperating(String serviceId, LocalDate date) {
         List<CalendarDate> exceptions = calendarDateRepository.findByServiceIdAndDate(serviceId, date);
-        if (!exceptions.isEmpty()) return exceptions.get(0).getExceptionType() == 1;
+        if (!exceptions.isEmpty()) {
+            return exceptions.get(0).getExceptionType() == 1;
+        }
 
         return calendarRepository.findById(serviceId)
-                .map(cal -> !date.isBefore(cal.getStartDate()) && !date.isAfter(cal.getEndDate())
+                .map(cal -> !date.isBefore(cal.getStartDate())
+                        && !date.isAfter(cal.getEndDate())
                         && cal.getOperatingDays().contains(date.getDayOfWeek()))
                 .orElse(false);
+    }
+
+    private String normalize(String value) {
+        if (value == null) {
+            throw new BadRequestException("Stop name must not be null");
+        }
+        String out = value.trim();
+        if (out.isEmpty()) {
+            throw new BadRequestException("Stop name must not be blank");
+        }
+        return out;
     }
 }

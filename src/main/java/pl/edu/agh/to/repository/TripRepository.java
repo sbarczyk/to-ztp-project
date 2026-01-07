@@ -10,12 +10,8 @@ import java.util.List;
 @Repository
 public interface TripRepository extends JpaRepository<Trip, String> {
 
-    /**
-     * Finds direct connections between stops and fetches associated Route information.
-     * This join prevents the N+1 problem by retrieving all necessary data in one query.
-     */
     @Query("""
-        SELECT t, stStart, stEnd, r 
+        SELECT t, stStart, stEnd, r
         FROM Trip t
         JOIN StopTime stStart ON t.tripId = stStart.tripId
         JOIN StopTime stEnd ON t.tripId = stEnd.tripId
