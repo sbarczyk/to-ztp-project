@@ -3,17 +3,22 @@ package pl.edu.agh.to.gtfs.statics;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pl.edu.agh.to.config.GtfsProperties;
-import pl.edu.agh.to.model.*;
+import pl.edu.agh.to.model.Calendar;
+import pl.edu.agh.to.model.CalendarDate;
+import pl.edu.agh.to.model.Route;
+import pl.edu.agh.to.model.Stop;
+import pl.edu.agh.to.model.StopTime;
+import pl.edu.agh.to.model.Trip;
 import pl.edu.agh.to.repository.CalendarDateRepository;
 import pl.edu.agh.to.repository.CalendarRepository;
 import pl.edu.agh.to.repository.RouteRepository;
 import pl.edu.agh.to.repository.StopRepository;
-import pl.edu.agh.to.repository.TripRepository;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -22,11 +27,24 @@ import java.sql.Time;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.function.Consumer;
 
+/**
+ * Periodically downloads and imports GTFS Static feed into the database.
+ * <p>
+ * Small tables are persisted through JPA repositories for readability,
+ * while large tables (trips, stop_times) are inserted with JdbcTemplate for performance.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class StaticGtfsService {
+
+    @Value("${ztp.gtfs.jdbc.batch.trips:20000}")
+    private int TRIPS_BATCH_SIZE;
+
+    @Value("${ztp.gtfs.jdbc.batch.stop-times:10000}")
+    private int STOP_TIMES_BATCH_SIZE;
 
     private final StaticGtfsClient staticGtfsClient;
     private final GtfsZipExtractor zipExtractor;
@@ -34,7 +52,10 @@ public class StaticGtfsService {
     private final JdbcTemplate jdbcTemplate;
     private final GtfsProperties props;
 
+    private final RouteRepository routeRepository;
     private final StopRepository stopRepository;
+    private final CalendarRepository calendarRepository;
+    private final CalendarDateRepository calendarDateRepository;
 
     @PostConstruct
     public void init() {
@@ -51,9 +72,7 @@ public class StaticGtfsService {
         Instant remoteTime = staticGtfsClient.getRemoteLastModified();
         Path localZip = Path.of(props.statics().dataDir(), props.statics().file());
 
-        boolean updateNeeded = isUpdateNeeded(localZip, remoteTime);
-
-        if (!updateNeeded) {
+        if (!isUpdateNeeded(localZip, remoteTime)) {
             log.info("GTFS Static is up to date (remote={})", remoteTime);
             return;
         }
@@ -64,7 +83,7 @@ public class StaticGtfsService {
 
     private boolean isUpdateNeeded(Path localZip, Instant remoteTime) {
         try {
-            if (!Files.exists(localZip) || stopRepository.count() == 0) {
+            if (!Files.exists(localZip) || isStopsTableEmpty()) {
                 return true;
             }
             Instant localTime = Files.getLastModifiedTime(localZip).toInstant();
@@ -73,6 +92,11 @@ public class StaticGtfsService {
             log.warn("Failed to read local GTFS timestamp, forcing update: {}", ex.getMessage());
             return true;
         }
+    }
+
+    private boolean isStopsTableEmpty() {
+        Integer cnt = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM stops", Integer.class);
+        return cnt == null || cnt == 0;
     }
 
     private void performReload(Instant remoteTime) {
@@ -93,15 +117,9 @@ public class StaticGtfsService {
         }
     }
 
-    /**
-     * Imports GTFS Static data into the database.
-     * Uses JdbcTemplate for bulk delete/insert for performance and predictability on large datasets (e.g. stop_times ~1.5M rows).
-     * JPA repositories are used for application queries and domain logic.
-     */
     @Transactional
     protected void importToDatabase(Path dir) throws IOException {
         Instant start = Instant.now();
-
         log.info("GTFS import started (dir={})", dir.toAbsolutePath());
 
         clearGtfsTables();
@@ -116,10 +134,11 @@ public class StaticGtfsService {
         log.info("Parsed files: routes={}, stops={}, calendars={}, calendarDates={}, trips={}, stopTimes={}",
                 routes.size(), stops.size(), calendars.size(), calendarDates.size(), trips.size(), stopTimes.size());
 
-        batchInsertRoutes(routes);
-        batchInsertStops(stops);
-        batchInsertCalendars(calendars);
-        batchInsertCalendarDates(calendarDates);
+        saveIfNotEmpty("routes", routes, routeRepository::saveAll);
+        saveIfNotEmpty("stops", stops, stopRepository::saveAll);
+        saveIfNotEmpty("calendar", calendars, calendarRepository::saveAll);
+        saveIfNotEmpty("calendar_dates", calendarDates, calendarDateRepository::saveAll);
+
         batchInsertTrips(trips);
         batchInsertStopTimes(stopTimes);
 
@@ -139,105 +158,13 @@ public class StaticGtfsService {
         log.info("GTFS tables cleared");
     }
 
-    private void batchInsertRoutes(List<Route> routes) {
-        if (routes.isEmpty()) {
-            log.info("Skipping routes insert (0 records)");
+    private <T> void saveIfNotEmpty(String name, List<T> items, Consumer<List<T>> saver) {
+        if (items.isEmpty()) {
+            log.info("Skipping {} insert (0 records)", name);
             return;
         }
-
-        String sql = """
-            INSERT INTO routes (route_id, route_short_name, route_long_name, route_type)
-            VALUES (?, ?, ?, ?)
-            """;
-
-        jdbcTemplate.batchUpdate(sql, routes, 1000, (ps, r) -> {
-            ps.setString(1, r.getRouteId());
-            ps.setString(2, r.getRouteShortName());
-            ps.setString(3, r.getRouteLongName());
-            ps.setInt(4, r.getRouteType());
-        });
-
-        log.info("Inserted routes={}", routes.size());
-    }
-
-    private void batchInsertStops(List<Stop> stops) {
-        if (stops.isEmpty()) {
-            log.info("Skipping stops insert (0 records)");
-            return;
-        }
-
-        String sql = """
-            INSERT INTO stops (stop_id, stop_name, stop_lat, stop_lon)
-            VALUES (?, ?, ?, ?)
-            """;
-
-        jdbcTemplate.batchUpdate(sql, stops, 2000, (ps, s) -> {
-            ps.setString(1, s.getId());
-            ps.setString(2, s.getName());
-            ps.setDouble(3, s.getLat());
-            ps.setDouble(4, s.getLon());
-        });
-
-        log.info("Inserted stops={}", stops.size());
-    }
-
-    private void batchInsertCalendars(List<Calendar> calendars) {
-        if (calendars.isEmpty()) {
-            log.info("Skipping calendar insert (0 records)");
-            return;
-        }
-
-        String calSql = """
-            INSERT INTO calendar (service_id, start_date, end_date)
-            VALUES (?, ?, ?)
-            """;
-
-        jdbcTemplate.batchUpdate(calSql, calendars, 1000, (ps, c) -> {
-            ps.setString(1, c.getServiceId());
-            ps.setObject(2, c.getStartDate());
-            ps.setObject(3, c.getEndDate());
-        });
-
-        List<CalendarDayRow> rows = calendars.stream()
-                .flatMap(c -> c.getOperatingDays().stream()
-                        .map(d -> new CalendarDayRow(c.getServiceId(), d.name())))
-                .toList();
-
-        if (!rows.isEmpty()) {
-            String daysSql = """
-                INSERT INTO calendar_operating_days (service_id, day)
-                VALUES (?, ?)
-                """;
-
-            jdbcTemplate.batchUpdate(daysSql, rows, 2000, (ps, row) -> {
-                ps.setString(1, row.serviceId());
-                ps.setString(2, row.day());
-            });
-        }
-
-        log.info("Inserted calendar records={}, operatingDays={}", calendars.size(), rows.size());
-    }
-
-    private record CalendarDayRow(String serviceId, String day) { }
-
-    private void batchInsertCalendarDates(List<CalendarDate> calendarDates) {
-        if (calendarDates.isEmpty()) {
-            log.info("Skipping calendar_dates insert (0 records)");
-            return;
-        }
-
-        String sql = """
-            INSERT INTO calendar_dates (service_id, date, exception_type)
-            VALUES (?, ?, ?)
-            """;
-
-        jdbcTemplate.batchUpdate(sql, calendarDates, 2000, (ps, cd) -> {
-            ps.setString(1, cd.getServiceId());
-            ps.setObject(2, cd.getDate());
-            ps.setInt(3, cd.getExceptionType());
-        });
-
-        log.info("Inserted calendar_dates={}", calendarDates.size());
+        saver.accept(items);
+        log.info("Inserted {}={}", name, items.size());
     }
 
     private void batchInsertTrips(List<Trip> trips) {
@@ -247,11 +174,11 @@ public class StaticGtfsService {
         }
 
         String sql = """
-            INSERT INTO trips (trip_id, route_id, service_id)
-            VALUES (?, ?, ?)
-            """;
+                INSERT INTO trips (trip_id, route_id, service_id)
+                VALUES (?, ?, ?)
+                """;
 
-        jdbcTemplate.batchUpdate(sql, trips, 2000, (ps, t) -> {
+        jdbcTemplate.batchUpdate(sql, trips, TRIPS_BATCH_SIZE, (ps, t) -> {
             ps.setString(1, t.getTripId());
             ps.setString(2, t.getRouteId());
             ps.setString(3, t.getServiceId());
@@ -267,11 +194,11 @@ public class StaticGtfsService {
         }
 
         String sql = """
-            INSERT INTO stop_times (id, trip_id, stop_id, arrival_time, departure_time, stop_sequence)
-            VALUES (nextval('stop_times_seq'), ?, ?, ?, ?, ?)
-            """;
+                INSERT INTO stop_times (id, trip_id, stop_id, arrival_time, departure_time, stop_sequence)
+                VALUES (nextval('stop_times_seq'), ?, ?, ?, ?, ?)
+                """;
 
-        jdbcTemplate.batchUpdate(sql, stopTimes, 5000, (ps, st) -> {
+        jdbcTemplate.batchUpdate(sql, stopTimes, STOP_TIMES_BATCH_SIZE, (ps, st) -> {
             ps.setString(1, st.getTripId());
             ps.setString(2, st.getStopId());
             ps.setTime(3, Time.valueOf(st.getArrivalTime()));
