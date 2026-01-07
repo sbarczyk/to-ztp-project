@@ -6,7 +6,7 @@ import java.time.LocalTime;
 
 @Builder
 @Value
-public class RouteSearchResult {
+public class RouteSearchResultDto {
     String startStop;
     String endStop;
     String tripId;

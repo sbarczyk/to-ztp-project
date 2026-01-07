@@ -10,7 +10,7 @@ import pl.edu.agh.to.exceptions.NotFoundException;
 import pl.edu.agh.to.gtfs.realtime.GtfsDelayService;
 import pl.edu.agh.to.model.CalendarDate;
 import pl.edu.agh.to.model.Route;
-import pl.edu.agh.to.model.RouteSearchResult;
+import pl.edu.agh.to.model.RouteSearchResultDto;
 import pl.edu.agh.to.model.Stop;
 import pl.edu.agh.to.model.StopTime;
 import pl.edu.agh.to.model.Trip;
@@ -38,7 +38,7 @@ public class RouteService {
     private final GtfsDelayService delayService;
 
     @Transactional(readOnly = true)
-    public RouteSearchResult findFastestConnection(String startName, String endName) {
+    public RouteSearchResultDto findFastestConnection(String startName, String endName) {
         String start = normalize(startName);
         String end = normalize(endName);
 
@@ -67,7 +67,7 @@ public class RouteService {
         LocalDate today = LocalDate.now();
         LocalTime now = LocalTime.now();
 
-        List<RouteSearchResult> candidates = new ArrayList<>();
+        List<RouteSearchResultDto> candidates = new ArrayList<>();
 
         for (Object[] row : results) {
             Trip trip = (Trip) row[0];
@@ -92,7 +92,7 @@ public class RouteService {
                     ? route.getRouteShortName()
                     : "ID:" + trip.getRouteId();
 
-            candidates.add(RouteSearchResult.builder()
+            candidates.add(RouteSearchResultDto.builder()
                     .startStop(start)
                     .endStop(end)
                     .tripId(trip.getTripId())
@@ -105,7 +105,7 @@ public class RouteService {
         }
 
         return candidates.stream()
-                .min(Comparator.comparing(RouteSearchResult::getArrivalTime))
+                .min(Comparator.comparing(RouteSearchResultDto::getArrivalTime))
                 .orElseThrow(() -> new NotFoundException("No direct connections available for today"));
     }
 
