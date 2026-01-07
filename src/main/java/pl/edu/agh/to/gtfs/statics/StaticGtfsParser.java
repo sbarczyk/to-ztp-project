@@ -28,7 +28,6 @@ public class StaticGtfsParser {
             String line;
             while ((line = br.readLine()) != null) {
                 String[] p = parseLine(line);
-
                 list.add(new Stop(p[0], p[2], Double.parseDouble(p[4]), Double.parseDouble(p[5])));
             }
         }
@@ -39,43 +38,11 @@ public class StaticGtfsParser {
     public List<Trip> parseTrips(Path path) throws IOException {
         List<Trip> list = new ArrayList<>();
         try (BufferedReader br = Files.newBufferedReader(path)) {
-            // 1. Odczytaj nagłówek, żeby znaleźć indeksy kolumn
-            String headerLine = br.readLine();
-            if (headerLine == null) return list;
-
-            if (headerLine.startsWith("\uFEFF")) {
-                headerLine = headerLine.substring(1);
-            }
-
-            String[] headers = parseLine(headerLine);
-            int tripIdx = -1;
-            int routeIdx = -1;
-            int serviceIdx = -1;
-
-            // Szukamy, na której pozycji są poszczególne kolumny
-            for (int i = 0; i < headers.length; i++) {
-                if (headers[i].equalsIgnoreCase("trip_id")) tripIdx = i;
-                if (headers[i].equalsIgnoreCase("route_id")) routeIdx = i;
-                if (headers[i].equalsIgnoreCase("service_id")) serviceIdx = i;
-            }
-
-            // Zabezpieczenie, gdyby plik był uszkodzony
-            if (tripIdx == -1 || routeIdx == -1 || serviceIdx == -1) {
-                throw new IOException("Brak wymaganych kolumn w pliku: " + path);
-            }
-
-            // 2. Czytamy dane używając wykrytych indeksów
+            br.readLine(); // skip header
             String line;
             while ((line = br.readLine()) != null) {
                 String[] p = parseLine(line);
-
-                // Konstruktor Trip(tripId, routeId, serviceId)
-                // Pobieramy dane z dynamicznie znalezionych kolumn
-                list.add(new Trip(
-                        p[tripIdx],   // Tu zawsze trafi trip_id, niezależnie gdzie jest w pliku
-                        p[routeIdx],  // Tu route_id
-                        p[serviceIdx] // Tu service_id
-                ));
+                list.add(new Trip(p[2], p[0], p[1]));
             }
         }
         return list;
@@ -84,10 +51,9 @@ public class StaticGtfsParser {
     public List<StopTime> parseStopTimes(Path path) throws IOException {
         List<StopTime> list = new ArrayList<>();
         try (BufferedReader br = Files.newBufferedReader(path)) {
-            br.readLine();
+            br.readLine(); // skip header
             String line;
             while ((line = br.readLine()) != null) {
-
                 String[] p = parseLine(line);
                 list.add(new StopTime(p[0], p[3], parseTime(p[1]), parseTime(p[2]), Integer.parseInt(p[4])));
             }
@@ -99,15 +65,10 @@ public class StaticGtfsParser {
         List<CalendarDate> list = new ArrayList<>();
         if (!Files.exists(path)) return list;
         try (BufferedReader br = Files.newBufferedReader(path)) {
-            br.readLine();
+            br.readLine(); // skip header
             String line;
             while ((line = br.readLine()) != null) {
-
                 String[] p = parseLine(line);
-
-
-//                System.out.println("Loaded Exception: ServiceID='" + p[0] + "', Data=" + p[1]);
-                // calendar_dates.txt: service_id(0), date(1), exception_type(2)
                 list.add(new CalendarDate(
                         p[0],
                         LocalDate.parse(p[1], DATE_FMT),
@@ -121,7 +82,7 @@ public class StaticGtfsParser {
 
 
     private String[] parseLine(String line) {
-        String[] parts = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)", -1);
+        String[] parts = line.split(",", -1);
 
         for (int i = 0; i < parts.length; i++) {
             String clean = parts[i].trim();
@@ -150,19 +111,22 @@ public class StaticGtfsParser {
         if (!Files.exists(path)) return list;
 
         try (BufferedReader br = Files.newBufferedReader(path)) {
-            br.readLine();
+            br.readLine(); // skip header
             String line;
             while ((line = br.readLine()) != null) {
                 String[] p = parseLine(line);
 
                 Set<DayOfWeek> days = new HashSet<>();
-                if (p[1].equals("1")) days.add(DayOfWeek.MONDAY);
-                if (p[2].equals("1")) days.add(DayOfWeek.TUESDAY);
-                if (p[3].equals("1")) days.add(DayOfWeek.WEDNESDAY);
-                if (p[4].equals("1")) days.add(DayOfWeek.THURSDAY);
-                if (p[5].equals("1")) days.add(DayOfWeek.FRIDAY);
-                if (p[6].equals("1")) days.add(DayOfWeek.SATURDAY);
-                if (p[7].equals("1")) days.add(DayOfWeek.SUNDAY);
+                DayOfWeek[] dayOfWeekMapping = {
+                        DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY,
+                        DayOfWeek.FRIDAY, DayOfWeek.SATURDAY, DayOfWeek.SUNDAY
+                };
+
+                for (int i = 1; i <= 7; i++) {
+                    if ("1".equals(p[i])) {
+                        days.add(dayOfWeekMapping[i - 1]);
+                    }
+                }
 
                 LocalDate start = LocalDate.parse(p[8], DATE_FMT);
                 LocalDate end = LocalDate.parse(p[9], DATE_FMT);
