@@ -13,8 +13,9 @@ import java.time.LocalTime;
 public class StopTime {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id; // Baza sama nada numer ID
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "stop_times_gen")
+    @SequenceGenerator(name = "stop_times_gen", sequenceName = "stop_times_seq", allocationSize = 50)
+    private Long id;
 
     private String tripId;
     private String stopId;
@@ -23,7 +24,6 @@ public class StopTime {
     private LocalTime departureTime;
     private int stopSequence;
 
-    // Konstruktor, którego używasz w parserze
     public StopTime(String tripId, String stopId, LocalTime arrivalTime, LocalTime departureTime, int stopSequence) {
         this.tripId = tripId;
         this.stopId = stopId;

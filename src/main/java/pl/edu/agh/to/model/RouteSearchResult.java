@@ -11,6 +11,7 @@ public class RouteSearchResult {
     String endStop;
     String tripId;
     String routeId;
+    String routeShortName;
     LocalTime departureTime;
     LocalTime arrivalTime;
     long delayInSeconds;
