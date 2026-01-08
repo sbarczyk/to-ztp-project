@@ -94,7 +94,6 @@ class GtfsDelayServiceTest {
     void shouldReturnZeroDelayWhenNoArrivalNorDepartureTimeIsPresent() throws InvalidProtocolBufferException {
         // Given
         String tripId = "T3";
-        // StopTimeUpdate bez ustawionego arrival i departure
         GtfsRealtime.TripUpdate.StopTimeUpdate stu = GtfsRealtime.TripUpdate.StopTimeUpdate.newBuilder()
                 .setStopSequence(1)
                 .build();
@@ -118,7 +117,6 @@ class GtfsDelayServiceTest {
     @Test
     void shouldSkipUpdateWhenTripDescriptorIsMissing() throws InvalidProtocolBufferException {
         // Given
-        // KLUCZ: buildPartial() pozwala pominąć wymagane pole 'trip'
         GtfsRealtime.TripUpdate tu = GtfsRealtime.TripUpdate.newBuilder()
                 .addStopTimeUpdate(GtfsRealtime.TripUpdate.StopTimeUpdate.newBuilder().setStopSequence(1).build())
                 .buildPartial();
@@ -138,7 +136,7 @@ class GtfsDelayServiceTest {
         // Given
         GtfsRealtime.TripUpdate tu = GtfsRealtime.TripUpdate.newBuilder()
                 .setTrip(GtfsRealtime.TripDescriptor.newBuilder().setTripId("T4").build())
-                .build(); // Brak StopTimeUpdate
+                .build();
 
         when(gtfsClient.fetchTripUpdatesAsBytes()).thenReturn(new byte[0]);
         when(gtfsParser.parseTripUpdates(any())).thenReturn(List.of(tu));

@@ -18,7 +18,7 @@ class GtfsClientTest {
     @Mock
     private WebClient webClient;
 
-    @SuppressWarnings("rawtypes") // because thenReturn can't match wild type <?>
+    @SuppressWarnings("rawtypes")
     @Mock
     private WebClient.RequestHeadersSpec headersSpec;
 

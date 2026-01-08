@@ -20,7 +20,7 @@ import java.util.stream.Stream;
 public class StaticGtfsParser {
 
     private static final DateTimeFormatter dateFMT = DateTimeFormatter.ofPattern("yyyyMMdd");
-    private static final DayOfWeek[] daysMapping = DayOfWeek.values(); // Mon-Sun
+    private static final DayOfWeek[] daysMapping = DayOfWeek.values();
 
     public List<Stop> parseStops(Path path) throws IOException {
         return processFile(path)
@@ -65,13 +65,9 @@ public class StaticGtfsParser {
                 .toList();
     }
 
-    /**
-     * Główna metoda pomocnicza: otwiera strumień, pomija nagłówek i parsuje linie.
-     * Dzięki try-with-resources strumień pliku zostanie zamknięty automatycznie.
-     */
     private Stream<String[]> processFile(Path path) throws IOException {
         return Files.lines(path)
-                .skip(1) // To zastępuje kłopotliwe br.readLine()
+                .skip(1)
                 .filter(line -> !line.isBlank())
                 .map(this::parseLine);
     }

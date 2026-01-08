@@ -45,7 +45,7 @@ class RouteServiceTest {
     @InjectMocks
     private RouteService routeService;
 
-    private final LocalDate testDate = LocalDate.of(2026, 1, 8); // Czwartek
+    private final LocalDate testDate = LocalDate.of(2026, 1, 8);
     private final LocalTime testNow = LocalTime.of(10, 0);
 
     @Test
@@ -156,7 +156,7 @@ class RouteServiceTest {
         when(tripRepository.findDirectConnectionsWithDetails(anyList(), anyList()))
                 .thenReturn(List.of(new Object[]{t1, st1S, st1E, r1}, new Object[]{t2, st2S, st2E, r2}));
 
-        when(delayService.getCurrentDelays()).thenReturn(Map.of("T2", 600L)); // T2 spóźniony -> 10:25
+        when(delayService.getCurrentDelays()).thenReturn(Map.of("T2", 600L));
         when(calendarDateRepository.findByServiceIdAndDate(anyString(), any())).thenReturn(Collections.emptyList());
         when(calendarRepository.findById("S1")).thenReturn(Optional.of(
                 new Calendar("S1", Set.of(DayOfWeek.THURSDAY), testDate.minusDays(1), testDate.plusDays(1))
@@ -172,7 +172,7 @@ class RouteServiceTest {
         }
 
         // Then
-        assertEquals("T1", result.getTripId()); // T1 (10:20) jest teraz szybszy niż T2 (10:25)
+        assertEquals("T1", result.getTripId());
     }
 
     @Test
@@ -189,7 +189,6 @@ class RouteServiceTest {
         when(tripRepository.findDirectConnectionsWithDetails(anyList(), anyList()))
                 .thenReturn(Collections.singletonList(row));
 
-        // Wyjątek typu 1 wymusza kursowanie nawet bez kalendarza
         when(calendarDateRepository.findByServiceIdAndDate("S1", testDate))
                 .thenReturn(List.of(new CalendarDate("S1", testDate, 1)));
 
@@ -290,8 +289,7 @@ class RouteServiceTest {
 
         when(calendarDateRepository.findByServiceIdAndDate(anyString(), any())).thenReturn(Collections.emptyList());
 
-        // Ustawiamy kalendarz tylko na poniedziałki (DayOfWeek.MONDAY)
-        // a nasza data testowa (czwartek) go nie obejmuje
+
         when(calendarRepository.findById("S1")).thenReturn(Optional.of(
                 new Calendar("S1", Set.of(DayOfWeek.MONDAY), testDate.minusDays(10), testDate.plusDays(10))
         ));

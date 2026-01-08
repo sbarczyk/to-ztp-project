@@ -22,7 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 
-/** Integration test for the TransportController using MockMvc. */
+
 @WebMvcTest(TransportController.class)
 class TransportControllerIntegrationTest {
 
@@ -36,7 +36,6 @@ class TransportControllerIntegrationTest {
 
     private static final String RANDOM_DEPARTURE_ENDPOINT = "/random-departure";
 
-    // --- Positive Scenario (Happy Path) ---
 
     @Test
     void shouldReturnDepartureJson_whenServiceReturnsData() throws Exception {
@@ -60,7 +59,6 @@ class TransportControllerIntegrationTest {
                 .andExpect(jsonPath("$.departureTime", is("2025-05-15 12:00:00")));
     }
 
-    // --- Negative Scenarios (Exception Handling) ---
 
     @Test
     void shouldReturn500_whenServiceThrowsInvalidProtocolBufferException() throws Exception {

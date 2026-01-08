@@ -6,9 +6,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
-/**
- * Parses GTFS Realtime protobuf payload into domain structures.
- */
+
 @Service
 public class GtfsParser {
 

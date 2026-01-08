@@ -8,9 +8,6 @@ import pl.edu.agh.to.exceptions.ExternalServiceException;
 
 import java.util.Objects;
 
-/**
- * Client for fetching GTFS Realtime data from external API.
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -18,11 +15,6 @@ public class GtfsClient {
 
     private final WebClient webClient;
 
-    /**
-     * Fetches TripUpdates.pb as raw bytes.
-     *
-     * @return protobuf payload
-     */
     public byte[] fetchTripUpdatesAsBytes() {
         log.debug("Fetching GTFS Realtime TripUpdates.pb");
         try {

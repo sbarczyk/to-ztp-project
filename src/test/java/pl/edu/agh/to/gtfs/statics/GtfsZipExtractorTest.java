@@ -23,7 +23,7 @@ class GtfsZipExtractorTest {
 
     @Test
     void shouldExtractZipSuccessfully() throws IOException {
-        // Given: Tworzymy prawdziwy plik ZIP w teście
+        // Given
         Path zipFile = tempDir.resolve("test.zip");
         try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(zipFile.toFile()))) {
             ZipEntry entry = new ZipEntry("stops.txt");
@@ -44,7 +44,7 @@ class GtfsZipExtractorTest {
 
     @Test
     void shouldThrowExceptionOnZipSlipAttack() throws IOException {
-        // Given: Tworzymy "złośliwy" plik ZIP (próba wyjścia katalog wyżej)
+        // Given
         Path zipFile = tempDir.resolve("evil.zip");
         try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(zipFile.toFile()))) {
             ZipEntry entry = new ZipEntry("../../evil.txt");

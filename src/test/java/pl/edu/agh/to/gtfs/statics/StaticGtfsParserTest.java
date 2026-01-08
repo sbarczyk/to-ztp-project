@@ -162,13 +162,10 @@ class StaticGtfsParserTest {
         assertThat(routes).hasSize(1);
         Route route = routes.get(0);
 
-        // p[0]
+
         assertThat(route.getRouteId()).isEqualTo("route_1");
-        // p[2]
         assertThat(route.getRouteShortName()).isEqualTo("501");
-        // p[3]
         assertThat(route.getRouteLongName()).isEqualTo("Chełmońskiego Pętla");
-        // p[4]
         assertThat(route.getRouteType()).isEqualTo(3);
     }
 }

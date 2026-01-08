@@ -20,10 +20,6 @@ public class GtfsDelayService {
     private final GtfsClient gtfsClient;
     private final GtfsParser gtfsParser;
 
-    /**
-     * Fetches current delays. If the real-time API is unavailable or corrupted,
-     * returns an empty map, allowing the system to fall back to static schedules.
-     */
     public Map<String, Long> getCurrentDelays() {
         try {
             byte[] data = gtfsClient.fetchTripUpdatesAsBytes();

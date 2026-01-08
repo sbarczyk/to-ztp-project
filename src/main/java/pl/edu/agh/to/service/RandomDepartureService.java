@@ -18,9 +18,7 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.stream.IntStream;
 
-/**
- * Returns a random departure from realtime feed.
- */
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -50,7 +48,6 @@ public class RandomDepartureService {
     private Optional<RandomDepartureDto> selectRandomValidDeparture(List<GtfsRealtime.TripUpdate> trips) {
         GtfsRealtime.TripUpdate randomTrip = trips.get(random.nextInt(trips.size()));
 
-        // 1. Walidacja pojazdu
         if (!randomTrip.hasVehicle() || randomTrip.getVehicle().getId().isBlank()) {
             return Optional.empty();
         }
@@ -60,7 +57,6 @@ public class RandomDepartureService {
             return Optional.empty();
         }
 
-        // 2. Wybór losowego przystanku i jego walidacja
         GtfsRealtime.TripUpdate.StopTimeUpdate randomStop = stops.get(random.nextInt(stops.size()));
 
         if (!isValidStop(randomStop)) {
