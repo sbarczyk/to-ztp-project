@@ -38,10 +38,16 @@ public class GlobalExceptionHandler {
             StaticGtfsDownloadException.class,
             StaticGtfsExtractException.class,
             ExternalServiceException.class,
-            InvalidProtocolBufferException.class
     })
     public ResponseEntity<ApiError> handleBadGateway(Exception ex, HttpServletRequest req) {
         return build(HttpStatus.BAD_GATEWAY, ex, req, false);
+    }
+
+    @ExceptionHandler({
+            InvalidProtocolBufferException.class
+    })
+    public ResponseEntity<ApiError> handleParsingErrors(Exception ex, HttpServletRequest req) {
+        return build(HttpStatus.INTERNAL_SERVER_ERROR, ex, req, false);
     }
 
     @ExceptionHandler(NoResourceFoundException.class)

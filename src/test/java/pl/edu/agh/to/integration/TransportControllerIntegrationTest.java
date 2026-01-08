@@ -8,8 +8,10 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import pl.edu.agh.to.controller.TransportController;
+import pl.edu.agh.to.exceptions.NotFoundException;
 import pl.edu.agh.to.model.RandomDepartureDto;
 import pl.edu.agh.to.service.RandomDepartureService;
+import pl.edu.agh.to.service.RouteService;
 
 import java.time.LocalDateTime;
 
@@ -28,7 +30,9 @@ class TransportControllerIntegrationTest {
     private MockMvc mockMvc;
 
     @MockitoBean
-    private RandomDepartureService service;
+    private RandomDepartureService randomDepartureService;
+    @MockitoBean
+    private RouteService routeService;
 
     private static final String RANDOM_DEPARTURE_ENDPOINT = "/random-departure";
 
@@ -44,7 +48,7 @@ class TransportControllerIntegrationTest {
                 .departureTime(departureTime)
                 .build();
 
-        given(service.getRandomDepartureInfo()).willReturn(dto);
+        given(randomDepartureService.getRandomDepartureInfo()).willReturn(dto);
 
         // when & then
         mockMvc.perform(get(RANDOM_DEPARTURE_ENDPOINT)
@@ -61,22 +65,22 @@ class TransportControllerIntegrationTest {
     @Test
     void shouldReturn500_whenServiceThrowsInvalidProtocolBufferException() throws Exception {
         // given
-        given(service.getRandomDepartureInfo()).willThrow(new InvalidProtocolBufferException("Test exception"));
+        given(randomDepartureService.getRandomDepartureInfo()).willThrow(new InvalidProtocolBufferException("Data parsing error"));
 
         // when & then
         mockMvc.perform(get(RANDOM_DEPARTURE_ENDPOINT))
                 .andExpect(status().isInternalServerError())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Data parsing failed")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Unexpected server error")));
     }
 
     @Test
     void shouldReturn500_whenServiceThrowsLogicException() throws Exception {
         // given
-        given(service.getRandomDepartureInfo()).willThrow(new IllegalStateException("No trip updates available"));
+        given(randomDepartureService.getRandomDepartureInfo()).willThrow(new NotFoundException("No trip updates available"));
 
         // when & then
         mockMvc.perform(get(RANDOM_DEPARTURE_ENDPOINT))
-                .andExpect(status().isInternalServerError())
+                .andExpect(status().isNotFound())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("No trip updates available")));
     }
 }
