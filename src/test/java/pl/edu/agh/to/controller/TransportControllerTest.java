@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import pl.edu.agh.to.model.RandomDepartureDto;
 import pl.edu.agh.to.service.RandomDepartureService;
+import pl.edu.agh.to.service.RouteService;
 
 import java.time.LocalDateTime;
 
@@ -15,7 +16,8 @@ class TransportControllerTest {
     void shouldReturnDto_givenServiceReturnsDto_thenControllerReturnsSameDto() throws Exception {
 
         // given
-        var service = Mockito.mock(RandomDepartureService.class);
+        var randomDepartureService = Mockito.mock(RandomDepartureService.class);
+        var routeService = Mockito.mock(RouteService.class);
 
         var dto = RandomDepartureDto.builder()
                 .vehicleId("A:57")
@@ -23,9 +25,9 @@ class TransportControllerTest {
                 .departureTime(LocalDateTime.now())
                 .build();
 
-        Mockito.when(service.getRandomDepartureInfo()).thenReturn(dto);
+        Mockito.when(randomDepartureService.getRandomDepartureInfo()).thenReturn(dto);
 
-        var controller = new TransportController(service);
+        var controller = new TransportController(randomDepartureService, routeService);
 
         // when
         RandomDepartureDto result = controller.randomDeparture();
@@ -38,8 +40,9 @@ class TransportControllerTest {
     void shouldReturnHomeMessage_whenHomeEndpointCalled_thenCorrectMessageReturned() {
 
         // given
-        var service = Mockito.mock(RandomDepartureService.class);
-        var controller = new TransportController(service);
+        var randomDepartureService = Mockito.mock(RandomDepartureService.class);
+        var routeService = Mockito.mock(RouteService.class);
+        var controller = new TransportController(randomDepartureService, routeService);
 
         // when
         String result = controller.home();
