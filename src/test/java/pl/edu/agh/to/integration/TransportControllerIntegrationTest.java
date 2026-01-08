@@ -8,12 +8,15 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import pl.edu.agh.to.controller.TransportController;
+import pl.edu.agh.to.exceptions.ExternalServiceException;
 import pl.edu.agh.to.exceptions.NotFoundException;
 import pl.edu.agh.to.model.RandomDepartureDto;
+import pl.edu.agh.to.model.RouteSearchResultDto;
 import pl.edu.agh.to.service.RandomDepartureService;
 import pl.edu.agh.to.service.RouteService;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 import static org.hamcrest.Matchers.is;
 import static org.mockito.BDDMockito.given;
@@ -28,13 +31,13 @@ class TransportControllerIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
-
     @MockitoBean
     private RandomDepartureService randomDepartureService;
     @MockitoBean
     private RouteService routeService;
 
     private static final String RANDOM_DEPARTURE_ENDPOINT = "/random-departure";
+    private static final String FASTEST_ROUTE_ENDPOINT = "/route/fastest";
 
 
     @Test
@@ -80,5 +83,81 @@ class TransportControllerIntegrationTest {
         mockMvc.perform(get(RANDOM_DEPARTURE_ENDPOINT))
                 .andExpect(status().isNotFound())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("No trip updates available")));
+    }
+
+    @Test
+    void shouldReturn500_whenServiceThrowsExternalServiceException() throws Exception {
+        // given
+        given(randomDepartureService.getRandomDepartureInfo()).willThrow(
+                new ExternalServiceException(
+                        "Failed to fetch TripUpdates.pb from external GTFS endpoint",
+                        new NullPointerException()
+                ));
+
+        // when & then
+        mockMvc.perform(get(RANDOM_DEPARTURE_ENDPOINT))
+                .andExpect(status().isBadGateway());
+    }
+
+    @Test
+    void shouldReturnRouteJson_whenServiceReturnsData() throws Exception {
+        // given
+        RouteSearchResultDto dto = RouteSearchResultDto.builder()
+                .startStop("START-A")
+                .endStop("END-B")
+                .tripId("TRIP-1")
+                .routeId("ROUTE-1")
+                .routeShortName("10")
+                .departureTime(LocalTime.of(9, 0, 0))
+                .arrivalTime(LocalTime.of(9, 30, 0))
+                .delayInSeconds(60)
+                .build();
+
+        given(routeService.findFastestConnection("START-A", "END-B")).willReturn(dto);
+
+        // when & then
+        mockMvc.perform(get(FASTEST_ROUTE_ENDPOINT)
+                        .param("start", "START-A")
+                        .param("end", "END-B")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.startStop", is("START-A")))
+                .andExpect(jsonPath("$.endStop", is("END-B")))
+                .andExpect(jsonPath("$.routeShortName", is("10")))
+                .andExpect(jsonPath("$.departureTime", is("09:00:00")));
+    }
+
+    @Test
+    void shouldReturnBadRequest_whenMissingParams() throws Exception {
+        mockMvc.perform(get(FASTEST_ROUTE_ENDPOINT))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldReturnNotFound_whenServiceThrowsNotFoundException() throws Exception {
+        // given
+        given(routeService.findFastestConnection("A", "B")).willThrow(new NotFoundException("No route found"));
+
+        // when & then
+        mockMvc.perform(get(FASTEST_ROUTE_ENDPOINT)
+                        .param("start", "A")
+                        .param("end", "B"))
+                .andExpect(status().isNotFound())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("No route found")));
+    }
+
+    @Test
+    void shouldReturnBadGateway_whenServiceThrowsExternalServiceException_forRoute() throws Exception {
+        // given
+        given(routeService.findFastestConnection("X", "Y")).willThrow(
+                new ExternalServiceException("Upstream failure", new RuntimeException())
+        );
+
+        // when & then
+        mockMvc.perform(get(FASTEST_ROUTE_ENDPOINT)
+                        .param("start", "X")
+                        .param("end", "Y"))
+                .andExpect(status().isBadGateway());
     }
 }
