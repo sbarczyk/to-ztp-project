@@ -5,21 +5,21 @@ Group 6.
 
 ---
 
-## Setup / Uruchomienie projektu
+## Setup / Project Startup
 
-1. **Uruchomienie infrastruktury (Docker)**  
-   W katalogu głównym projektu znajduje się plik `docker-compose.yml`.
+1. **Starting the infrastructure (Docker)**  
+   The project root directory contains a `docker-compose.yml` file.
 
    ```bash
    docker compose up -d
    ```
 
-   Komenda uruchamia bazę danych oraz pozostałe wymagane usługi.
+   This command starts the database and all other required services.
 
-2. **Uruchomienie aplikacji**
+2. **Starting the application**
 
-   Aplikację uruchamiamy standardowo jako aplikację Spring Boot:
-   - z poziomu IDE (uruchomienie klasy `main`)
+   The application is started as a standard Spring Boot application:
+   - from an IDE (by running the `main` class)
 
 ---
 
