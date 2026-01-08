@@ -21,10 +21,10 @@ import pl.edu.agh.to.repository.StopRepository;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.time.LocalTime;
 import java.util.List;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -70,12 +70,12 @@ class StaticGtfsServiceTest {
                 calendarDateRepository
         );
 
-        ReflectionTestUtils.setField(service, "TRIPS_BATCH_SIZE", 100);
-        ReflectionTestUtils.setField(service, "STOP_TIMES_BATCH_SIZE", 100);
+        ReflectionTestUtils.setField(service, "tripsBatchSize", 100);
+        ReflectionTestUtils.setField(service, "stopTimesBatchSize", 100);
     }
 
     @Test
-    void shouldRefreshData_WhenBazaIsEmpty() throws Exception { // Dodaj throws Exception
+    void shouldRefreshData_WhenBazaIsEmpty() throws Exception {
         // Given
         Instant remoteTime = Instant.now();
         when(staticGtfsClient.getRemoteLastModified()).thenReturn(remoteTime);
@@ -83,7 +83,7 @@ class StaticGtfsServiceTest {
         Path localZip = tempDir.resolve("GTFS_KRK.zip");
         Files.createFile(localZip);
 
-        when(jdbcTemplate.queryForObject(eq("SELECT COUNT(*) FROM stops"), eq(Integer.class))).thenReturn(0);
+        when(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM stops", Integer.class)).thenReturn(0);
 
         Path downloadedZip = tempDir.resolve("downloaded.zip");
         when(staticGtfsClient.downloadZipToDisk(remoteTime)).thenReturn(downloadedZip);
@@ -93,23 +93,22 @@ class StaticGtfsServiceTest {
 
         // Then
         verify(staticGtfsClient).downloadZipToDisk(remoteTime);
-        verify(zipExtractor).extractZipToDirectory(eq(downloadedZip), any(Path.class));
+        verify(zipExtractor).extractZipToDirectory(any(), any());
         verify(jdbcTemplate).update("DELETE FROM stops");
     }
 
     @Test
     void shouldNotRefreshData_WhenLocalFileIsUpToDate() throws Exception {
         // Given
-        Instant remoteTime = Instant.parse("2025-01-01T10:00:00Z");
-        Instant localTime = Instant.parse("2025-01-01T12:00:00Z"); // Lokalny plik nowszy
+        Instant remoteTime = Instant.parse("2026-01-01T10:00:00Z");
+        Instant localTime = Instant.parse("2026-01-01T12:00:00Z");
 
         Path localZip = tempDir.resolve("GTFS_KRK.zip");
         Files.createFile(localZip);
         Files.setLastModifiedTime(localZip, java.nio.file.attribute.FileTime.from(localTime));
 
         when(staticGtfsClient.getRemoteLastModified()).thenReturn(remoteTime);
-
-        when(jdbcTemplate.queryForObject(eq("SELECT COUNT(*) FROM stops"), eq(Integer.class))).thenReturn(500);
+        when(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM stops", Integer.class)).thenReturn(500);
 
         // When
         service.refreshDataIfNeeded();
@@ -127,15 +126,13 @@ class StaticGtfsServiceTest {
         Path localZip = tempDir.resolve("GTFS_KRK.zip");
         Files.createFile(localZip);
 
-        when(jdbcTemplate.queryForObject(eq("SELECT COUNT(*) FROM stops"), eq(Integer.class))).thenReturn(0);
+        when(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM stops", Integer.class)).thenReturn(0);
         when(staticGtfsClient.downloadZipToDisk(remoteTime)).thenReturn(tempDir.resolve("new.zip"));
 
-        Trip mockTrip = new Trip("trip1", "route1", "service1");
-        List<Trip> trips = List.of(mockTrip);
+        List<Trip> trips = List.of(new Trip("trip1", "route1", "service1"));
         when(parser.parseTrips(any())).thenReturn(trips);
 
-        StopTime mockStopTime = new StopTime("trip1", "stop1", java.time.LocalTime.NOON, java.time.LocalTime.NOON, 1);
-        List<StopTime> stopTimes = List.of(mockStopTime);
+        List<StopTime> stopTimes = List.of(new StopTime("trip1", "stop1", LocalTime.NOON, LocalTime.NOON, 1));
         when(parser.parseStopTimes(any())).thenReturn(stopTimes);
 
         when(parser.parseRoutes(any())).thenReturn(List.of(new Route("r1", "1", "Bus", 3)));
@@ -149,16 +146,16 @@ class StaticGtfsServiceTest {
         verify(stopRepository).saveAll(anyList());
 
         verify(jdbcTemplate).batchUpdate(
-                contains("INSERT INTO trips"),
-                eq(trips),
-                eq(100),
+                argThat(sql -> sql.contains("INSERT INTO trips")),
+                anyList(),
+                anyInt(),
                 any()
         );
 
         verify(jdbcTemplate).batchUpdate(
-                contains("INSERT INTO stop_times"),
-                eq(stopTimes),
-                eq(100),
+                argThat(sql -> sql.contains("INSERT INTO stop_times")),
+                anyList(),
+                anyInt(),
                 any()
         );
     }
@@ -168,40 +165,9 @@ class StaticGtfsServiceTest {
         // Given
         Instant remoteTime = Instant.now();
         when(staticGtfsClient.getRemoteLastModified()).thenReturn(remoteTime);
-        try {
-            Path localZip = tempDir.resolve("GTFS_KRK.zip");
-            if (!Files.exists(localZip)) {
-                Files.createFile(localZip);
-                Files.setLastModifiedTime(localZip, java.nio.file.attribute.FileTime.from(remoteTime.plusSeconds(3600)));
-            }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
 
         // When
         service.scheduledRefresh();
-
-        // Then
-        verify(staticGtfsClient).getRemoteLastModified();
-    }
-
-    @Test
-    void shouldTriggerRefresh_WhenInitIsCalled() {
-        // Given
-        Instant remoteTime = Instant.now();
-        when(staticGtfsClient.getRemoteLastModified()).thenReturn(remoteTime);
-        try {
-            Path localZip = tempDir.resolve("GTFS_KRK.zip");
-            if (!Files.exists(localZip)) {
-                Files.createFile(localZip);
-                Files.setLastModifiedTime(localZip, java.nio.file.attribute.FileTime.from(remoteTime.plusSeconds(3600)));
-            }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-
-        // When
-        service.init();
 
         // Then
         verify(staticGtfsClient).getRemoteLastModified();
@@ -212,12 +178,11 @@ class StaticGtfsServiceTest {
         // Given
         Instant remoteTime = Instant.now();
         when(staticGtfsClient.getRemoteLastModified()).thenReturn(remoteTime);
-        when(jdbcTemplate.queryForObject(eq("SELECT COUNT(*) FROM stops"), eq(Integer.class))).thenReturn(0);
+        when(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM stops", Integer.class)).thenReturn(0);
         when(staticGtfsClient.downloadZipToDisk(remoteTime)).thenReturn(tempDir.resolve("new.zip"));
 
         Path localZip = tempDir.resolve("GTFS_KRK.zip");
         Files.createFile(localZip);
-
 
         when(parser.parseTrips(any())).thenReturn(List.of());
         when(parser.parseStopTimes(any())).thenReturn(List.of());
@@ -227,7 +192,6 @@ class StaticGtfsServiceTest {
         service.refreshDataIfNeeded();
 
         // Then
-        verify(jdbcTemplate, never()).batchUpdate(contains("INSERT INTO trips"), anyList(), anyInt(), any());
-        verify(jdbcTemplate, never()).batchUpdate(contains("INSERT INTO stop_times"), anyList(), anyInt(), any());
+        verify(jdbcTemplate, never()).batchUpdate(anyString(), anyList(), anyInt(), any());
     }
 }

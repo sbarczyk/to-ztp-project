@@ -20,10 +20,10 @@ import pl.edu.agh.to.repository.TripRepository;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -43,69 +43,65 @@ public class RouteService {
 
         log.info("Searching fastest direct connection: '{}' -> '{}'", start, end);
 
-        List<String> startIds = stopRepository.findByName(start).stream()
-                .map(Stop::getId)
-                .toList();
-        List<String> endIds = stopRepository.findByName(end).stream()
-                .map(Stop::getId)
-                .toList();
+        List<String> startIds = getStopIdsByName(start);
+        List<String> endIds = getStopIdsByName(end);
 
-        if (startIds.isEmpty()) {
-            throw new BadRequestException("Start stop not found: " + start);
-        }
-        if (endIds.isEmpty()) {
-            throw new BadRequestException("End stop not found: " + end);
-        }
+        validateStopPresence(start, startIds, end, endIds);
 
         List<Object[]> results = tripRepository.findDirectConnectionsWithDetails(startIds, endIds);
-        if (results.isEmpty()) {
-            throw new NotFoundException("No direct connections found for given stops");
-        }
 
         Map<String, Long> delays = delayService.getCurrentDelays();
         LocalDate today = LocalDate.now();
         LocalTime now = LocalTime.now();
 
-        List<RouteSearchResultDto> candidates = new ArrayList<>();
-
-        for (Object[] row : results) {
-            Trip trip = (Trip) row[0];
-            StopTime stStart = (StopTime) row[1];
-            StopTime stEnd = (StopTime) row[2];
-            Route route = (Route) row[3];
-
-            if (!isTripOperating(trip.getServiceId(), today)) {
-                continue;
-            }
-
-            long delay = delays.getOrDefault(trip.getTripId(), 0L);
-
-            LocalTime realDeparture = stStart.getDepartureTime().plusSeconds(delay);
-            LocalTime realArrival = stEnd.getArrivalTime().plusSeconds(delay);
-
-            if (!realDeparture.isAfter(now)) {
-                continue;
-            }
-
-            String displayName = route.getRouteShortName();
-
-            candidates.add(RouteSearchResultDto.builder()
-                    .startStop(start)
-                    .endStop(end)
-                    .tripId(trip.getTripId())
-                    .routeId(trip.getRouteId())
-                    .routeShortName(displayName)
-                    .departureTime(realDeparture)
-                    .arrivalTime(realArrival)
-                    .delayInSeconds(delay)
-                    .build());
-        }
-
-        return candidates.stream()
+        return results.stream()
+                .map(row -> mapToCandidate(row, start, end, today, now, delays))
+                .flatMap(Optional::stream)
                 .min(Comparator.comparing(RouteSearchResultDto::getArrivalTime))
                 .orElseThrow(() -> new NotFoundException("No direct connections available for today"));
     }
 
+    private Optional<RouteSearchResultDto> mapToCandidate(Object[] row, String start, String end,
+                                                          LocalDate today, LocalTime now, Map<String, Long> delays) {
+        Trip trip = (Trip) row[0];
+        StopTime stStart = (StopTime) row[1];
+        StopTime stEnd = (StopTime) row[2];
+        Route route = (Route) row[3];
+
+        if (!isTripOperating(trip.getServiceId(), today)) {
+            return Optional.empty();
+        }
+
+        long delay = delays.getOrDefault(trip.getTripId(), 0L);
+        LocalTime realDeparture = stStart.getDepartureTime().plusSeconds(delay);
+        LocalTime realArrival = stEnd.getArrivalTime().plusSeconds(delay);
+
+        if (!realDeparture.isAfter(now)) {
+            return Optional.empty();
+        }
+
+        return Optional.of(RouteSearchResultDto.builder()
+                .startStop(start)
+                .endStop(end)
+                .tripId(trip.getTripId())
+                .routeId(trip.getRouteId())
+                .routeShortName(route.getRouteShortName())
+                .departureTime(realDeparture)
+                .arrivalTime(realArrival)
+                .delayInSeconds(delay)
+                .build());
+    }
+
+    private List<String> getStopIdsByName(String name) {
+        return stopRepository.findByName(name).stream()
+                .map(Stop::getId)
+                .toList();
+    }
+
+    private void validateStopPresence(String start, List<String> startIds, String end, List<String> endIds) {
+        if (startIds.isEmpty()) throw new BadRequestException("Start stop not found: " + start);
+        if (endIds.isEmpty()) throw new BadRequestException("End stop not found: " + end);
+    }
 
     private boolean isTripOperating(String serviceId, LocalDate date) {
         List<CalendarDate> exceptions = calendarDateRepository.findByServiceIdAndDate(serviceId, date);

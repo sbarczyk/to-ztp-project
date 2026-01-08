@@ -2,7 +2,6 @@ package pl.edu.agh.to.gtfs.statics;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import pl.edu.agh.to.gtfs.statics.StaticGtfsParser;
 import pl.edu.agh.to.model.*;
 
 import java.io.IOException;

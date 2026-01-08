@@ -14,7 +14,9 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
+import java.util.stream.IntStream;
 
 /**
  * Returns a random departure from realtime feed.
@@ -38,42 +40,54 @@ public class RandomDepartureService {
             throw new NotFoundException("No trip updates available");
         }
 
-        for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-            GtfsRealtime.TripUpdate randomTrip = trips.get(random.nextInt(trips.size()));
-            List<GtfsRealtime.TripUpdate.StopTimeUpdate> stops = randomTrip.getStopTimeUpdateList();
-            if (stops.isEmpty()) {
-                continue;
-            }
+        return IntStream.range(0, MAX_ATTEMPTS)
+                .mapToObj(i -> selectRandomValidDeparture(trips))
+                .flatMap(Optional::stream)
+                .findFirst()
+                .orElseThrow(() -> new NotFoundException("Unable to find valid random departure after " + MAX_ATTEMPTS + " attempts"));
+    }
 
-            GtfsRealtime.TripUpdate.StopTimeUpdate randomStop = stops.get(random.nextInt(stops.size()));
-            if (!randomStop.hasDeparture() || !randomStop.getDeparture().hasTime()) {
-                continue;
-            }
+    private Optional<RandomDepartureDto> selectRandomValidDeparture(List<GtfsRealtime.TripUpdate> trips) {
+        GtfsRealtime.TripUpdate randomTrip = trips.get(random.nextInt(trips.size()));
 
-            if (!randomTrip.hasVehicle() || randomTrip.getVehicle().getId().isBlank()) {
-                continue;
-            }
-
-            String stopId = randomStop.getStopId();
-            if (stopId == null || stopId.isBlank()) {
-                continue;
-            }
-
-            long departureEpoch = randomStop.getDeparture().getTime();
-            LocalDateTime departureTime = LocalDateTime.ofInstant(
-                    Instant.ofEpochSecond(departureEpoch),
-                    ZoneId.systemDefault()
-            );
-
-            log.debug("Random departure selected in {} attempt(s)", attempt);
-
-            return RandomDepartureDto.builder()
-                    .vehicleId(randomTrip.getVehicle().getId())
-                    .stopId(stopId)
-                    .departureTime(departureTime)
-                    .build();
+        // 1. Walidacja pojazdu
+        if (!randomTrip.hasVehicle() || randomTrip.getVehicle().getId().isBlank()) {
+            return Optional.empty();
         }
 
-        throw new NotFoundException("Unable to find valid random departure after " + MAX_ATTEMPTS + " attempts");
+        List<GtfsRealtime.TripUpdate.StopTimeUpdate> stops = randomTrip.getStopTimeUpdateList();
+        if (stops.isEmpty()) {
+            return Optional.empty();
+        }
+
+        // 2. Wybór losowego przystanku i jego walidacja
+        GtfsRealtime.TripUpdate.StopTimeUpdate randomStop = stops.get(random.nextInt(stops.size()));
+
+        if (!isValidStop(randomStop)) {
+            return Optional.empty();
+        }
+
+        return Optional.of(mapToDto(randomTrip, randomStop));
+    }
+
+    private boolean isValidStop(GtfsRealtime.TripUpdate.StopTimeUpdate stop) {
+        return stop.hasDeparture()
+                && stop.getDeparture().hasTime()
+                && stop.getStopId() != null
+                && !stop.getStopId().isBlank();
+    }
+
+    private RandomDepartureDto mapToDto(GtfsRealtime.TripUpdate trip, GtfsRealtime.TripUpdate.StopTimeUpdate stop) {
+        long departureEpoch = stop.getDeparture().getTime();
+        LocalDateTime departureTime = LocalDateTime.ofInstant(
+                Instant.ofEpochSecond(departureEpoch),
+                ZoneId.systemDefault()
+        );
+
+        return RandomDepartureDto.builder()
+                .vehicleId(trip.getVehicle().getId())
+                .stopId(stop.getStopId())
+                .departureTime(departureTime)
+                .build();
     }
 }

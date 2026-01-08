@@ -1,6 +1,5 @@
 package pl.edu.agh.to.gtfs.statics;
 
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import pl.edu.agh.to.exceptions.StaticGtfsExtractException;
 

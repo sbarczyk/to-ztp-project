@@ -41,10 +41,10 @@ import java.util.function.Consumer;
 public class StaticGtfsService {
 
     @Value("${ztp.gtfs.jdbc.batch.trips:20000}")
-    private int TRIPS_BATCH_SIZE;
+    private int tripsBatchSize;
 
     @Value("${ztp.gtfs.jdbc.batch.stop-times:10000}")
-    private int STOP_TIMES_BATCH_SIZE;
+    private int stopTimesBatchSize;
 
     private final StaticGtfsClient staticGtfsClient;
     private final GtfsZipExtractor zipExtractor;
@@ -178,7 +178,7 @@ public class StaticGtfsService {
                 VALUES (?, ?, ?)
                 """;
 
-        jdbcTemplate.batchUpdate(sql, trips, TRIPS_BATCH_SIZE, (ps, t) -> {
+        jdbcTemplate.batchUpdate(sql, trips, tripsBatchSize, (ps, t) -> {
             ps.setString(1, t.getTripId());
             ps.setString(2, t.getRouteId());
             ps.setString(3, t.getServiceId());
@@ -198,7 +198,7 @@ public class StaticGtfsService {
                 VALUES (nextval('stop_times_seq'), ?, ?, ?, ?, ?)
                 """;
 
-        jdbcTemplate.batchUpdate(sql, stopTimes, STOP_TIMES_BATCH_SIZE, (ps, st) -> {
+        jdbcTemplate.batchUpdate(sql, stopTimes, stopTimesBatchSize, (ps, st) -> {
             ps.setString(1, st.getTripId());
             ps.setString(2, st.getStopId());
             ps.setTime(3, Time.valueOf(st.getArrivalTime()));

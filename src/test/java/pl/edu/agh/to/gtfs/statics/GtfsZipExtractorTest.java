@@ -3,7 +3,6 @@ package pl.edu.agh.to.gtfs.statics;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import pl.edu.agh.to.exceptions.StaticGtfsExtractException;
-import pl.edu.agh.to.gtfs.statics.GtfsZipExtractor;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
