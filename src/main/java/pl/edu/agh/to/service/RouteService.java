@@ -63,7 +63,7 @@ public class RouteService {
             throw new NotFoundException("No direct connections found for given stops");
         }
 
-        Map<String, Long> delays = fetchDelaysSafe();
+        Map<String, Long> delays = delayService.getCurrentDelays();
         LocalDate today = LocalDate.now();
         LocalTime now = LocalTime.now();
 
@@ -88,9 +88,7 @@ public class RouteService {
                 continue;
             }
 
-            String displayName = (route != null && route.getRouteShortName() != null && !route.getRouteShortName().isBlank())
-                    ? route.getRouteShortName()
-                    : "ID:" + trip.getRouteId();
+            String displayName = route.getRouteShortName();
 
             candidates.add(RouteSearchResultDto.builder()
                     .startStop(start)
@@ -109,19 +107,11 @@ public class RouteService {
                 .orElseThrow(() -> new NotFoundException("No direct connections available for today"));
     }
 
-    private Map<String, Long> fetchDelaysSafe() {
-        try {
-            return delayService.getCurrentDelays();
-        } catch (InvalidProtocolBufferException ex) {
-            log.warn("Delays unavailable due to protobuf parsing error: {}", ex.getMessage());
-            return Map.of();
-        }
-    }
 
     private boolean isTripOperating(String serviceId, LocalDate date) {
         List<CalendarDate> exceptions = calendarDateRepository.findByServiceIdAndDate(serviceId, date);
         if (!exceptions.isEmpty()) {
-            return exceptions.get(0).getExceptionType() == 1;
+            return exceptions.getFirst().getExceptionType() == 1;
         }
 
         return calendarRepository.findById(serviceId)
