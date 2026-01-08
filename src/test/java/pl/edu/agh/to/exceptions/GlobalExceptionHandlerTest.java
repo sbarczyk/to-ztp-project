@@ -54,11 +54,10 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void shouldHandleInvalidProtocolBufferExceptionAsBadGateway() throws Exception {
+    void shouldHandleInvalidProtocolBufferExceptionAsInternalServerError() throws Exception {
         mockMvc.perform(get("/test/protobuf-error"))
-                .andExpect(status().isBadGateway())
-                .andExpect(jsonPath("$.status", is(502)))
-                .andExpect(jsonPath("$.message", is("Protobuf error")));
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.message", is("Unexpected server error")));
     }
 
     @Test
