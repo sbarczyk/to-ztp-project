@@ -65,12 +65,12 @@ class TransportControllerIntegrationTest {
     @Test
     void shouldReturn500_whenServiceThrowsInvalidProtocolBufferException() throws Exception {
         // given
-        given(randomDepartureService.getRandomDepartureInfo()).willThrow(new InvalidProtocolBufferException("Test exception"));
+        given(randomDepartureService.getRandomDepartureInfo()).willThrow(new InvalidProtocolBufferException("Data parsing error"));
 
         // when & then
         mockMvc.perform(get(RANDOM_DEPARTURE_ENDPOINT))
-                .andExpect(status().is5xxServerError())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Data parsing failed")));
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Unexpected server error")));
     }
 
     @Test
