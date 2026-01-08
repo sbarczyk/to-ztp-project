@@ -12,7 +12,6 @@ import pl.edu.agh.to.model.RandomDepartureDto;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Random;
 
 import static org.assertj.core.api.Assertions.assertThat;

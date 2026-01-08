@@ -58,20 +58,25 @@ class StaticGtfsServiceTest {
                 3600000L
         );
 
-        service = new StaticGtfsService(
-                staticGtfsClient,
-                zipExtractor,
+        StaticGtfsImporter importer = new StaticGtfsImporter(
                 parser,
                 jdbcTemplate,
-                realProps,
                 routeRepository,
                 stopRepository,
                 calendarRepository,
                 calendarDateRepository
         );
 
-        ReflectionTestUtils.setField(service, "tripsBatchSize", 100);
-        ReflectionTestUtils.setField(service, "stopTimesBatchSize", 100);
+        ReflectionTestUtils.setField(importer, "tripsBatchSize", 100);
+        ReflectionTestUtils.setField(importer, "stopTimesBatchSize", 100);
+
+        service = new StaticGtfsService(
+                staticGtfsClient,
+                zipExtractor,
+                jdbcTemplate,
+                realProps,
+                importer
+        );
     }
 
     @Test
