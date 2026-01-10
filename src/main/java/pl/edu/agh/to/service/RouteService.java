@@ -99,8 +99,12 @@ public class RouteService {
     }
 
     private void validateStopPresence(String start, List<String> startIds, String end, List<String> endIds) {
-        if (startIds.isEmpty()) throw new BadRequestException("Start stop not found: " + start);
-        if (endIds.isEmpty()) throw new BadRequestException("End stop not found: " + end);
+        if (startIds.isEmpty()) {
+            throw new BadRequestException("Start stop not found: " + start);
+        }
+        if (endIds.isEmpty()) {
+            throw new BadRequestException("End stop not found: " + end);
+        }
     }
 
     private boolean isTripOperating(String serviceId, LocalDate date) {

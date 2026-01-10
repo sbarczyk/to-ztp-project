@@ -39,6 +39,9 @@ class StaticGtfsClientTest {
     @Mock(answer = Answers.RETURNS_DEEP_STUBS)
     private WebClient webClient;
 
+    @Mock
+    private ResponseEntity<Void> responseEntity;
+
     @InjectMocks
     private StaticGtfsClient staticGtfsClient;
 
@@ -50,9 +53,6 @@ class StaticGtfsClientTest {
         Instant expectedInstant = Instant.ofEpochMilli(lastModifiedMillis);
 
         when(props.statics().file()).thenReturn(fileName);
-
-        @SuppressWarnings("unchecked")
-        ResponseEntity<Void> responseEntity = (ResponseEntity<Void>) mock(ResponseEntity.class);
         HttpHeaders headers = new HttpHeaders();
         headers.setLastModified(lastModifiedMillis);
 
