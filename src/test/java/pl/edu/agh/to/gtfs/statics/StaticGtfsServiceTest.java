@@ -59,9 +59,6 @@ class StaticGtfsServiceTest {
                 calendarDateRepository
         );
 
-        ReflectionTestUtils.setField(importer, "tripsBatchSize", 100);
-        ReflectionTestUtils.setField(importer, "stopTimesBatchSize", 100);
-
         service = new StaticGtfsService(
                 staticGtfsClient,
                 zipExtractor,
@@ -86,7 +83,7 @@ class StaticGtfsServiceTest {
                 staticProps,
                 3600000L,
                 new GtfsProperties.JdbcBatchProperties(
-                        5000, 5000
+                        100, 100
                 )
         );
     }
