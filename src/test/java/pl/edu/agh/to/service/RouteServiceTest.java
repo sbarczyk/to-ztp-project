@@ -89,6 +89,7 @@ class RouteServiceTest {
         // Given
         setupStopsMocks("A", "B");
         when(tripRepository.findDirectConnectionsWithDetails(anyList(), anyList())).thenReturn(Collections.emptyList());
+        when(delayService.getCurrentDelays()).thenReturn(Collections.emptyMap());
 
         // When
         Executable action = () -> routeService.findFastestConnection("A", "B");
@@ -189,8 +190,10 @@ class RouteServiceTest {
         when(tripRepository.findDirectConnectionsWithDetails(anyList(), anyList()))
                 .thenReturn(Collections.singletonList(row));
 
-        when(calendarDateRepository.findByServiceIdAndDate("S1", testDate))
+        when(calendarDateRepository.findByServiceIdAndDate(eq("S1"), any(LocalDate.class)))
                 .thenReturn(List.of(new CalendarDate("S1", testDate, 1)));
+
+        when(delayService.getCurrentDelays()).thenReturn(Collections.emptyMap());
 
         // When
         RouteSearchResultDto result;
@@ -220,8 +223,9 @@ class RouteServiceTest {
         when(tripRepository.findDirectConnectionsWithDetails(anyList(), anyList()))
                 .thenReturn(Collections.singletonList(row));
 
-        when(calendarDateRepository.findByServiceIdAndDate("S1", testDate))
+        when(calendarDateRepository.findByServiceIdAndDate(eq("S1"), any(LocalDate.class)))
                 .thenReturn(List.of(new CalendarDate("S1", testDate, 2)));
+        when(delayService.getCurrentDelays()).thenReturn(Collections.emptyMap());
 
         // When
         Executable action;
