@@ -2,10 +2,10 @@ package pl.edu.agh.to.gtfs.statics;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import pl.edu.agh.to.config.GtfsProperties;
 import pl.edu.agh.to.model.*;
 import pl.edu.agh.to.repository.CalendarDateRepository;
 import pl.edu.agh.to.repository.CalendarRepository;
@@ -28,11 +28,7 @@ class StaticGtfsImporter {
     private final StaticGtfsParser parser;
     private final JdbcTemplate jdbcTemplate;
 
-    @Value("${ztp.gtfs.jdbc.batch.trips:20000}")
-    private int tripsBatchSize;
-
-    @Value("${ztp.gtfs.jdbc.batch.stop-times:10000}")
-    private int stopTimesBatchSize;
+    private final GtfsProperties props;
 
     private final RouteRepository routeRepository;
     private final StopRepository stopRepository;
@@ -46,12 +42,14 @@ class StaticGtfsImporter {
 
         clearGtfsTables();
 
-        List<Route> routes = parser.parseRoutes(dir.resolve("routes.txt"));
-        List<Stop> stops = parser.parseStops(dir.resolve("stops.txt"));
-        List<Calendar> calendars = parser.parseCalendar(dir.resolve("calendar.txt"));
-        List<CalendarDate> calendarDates = parser.parseCalendarDates(dir.resolve("calendar_dates.txt"));
-        List<Trip> trips = parser.parseTrips(dir.resolve("trips.txt"));
-        List<StopTime> stopTimes = parser.parseStopTimes(dir.resolve("stop_times.txt"));
+        GtfsProperties.StaticProperties.FilenameProperties filenames = props.statics().filenames();
+
+        List<Route> routes = parser.parseRoutes(dir.resolve(filenames.routes()));
+        List<Stop> stops = parser.parseStops(dir.resolve(filenames.stops()));
+        List<Calendar> calendars = parser.parseCalendar(dir.resolve(filenames.calendar()));
+        List<CalendarDate> calendarDates = parser.parseCalendarDates(dir.resolve(filenames.calendarDates()));
+        List<Trip> trips = parser.parseTrips(dir.resolve(filenames.trips()));
+        List<StopTime> stopTimes = parser.parseStopTimes(dir.resolve(filenames.stopTimes()));
 
         log.info("Parsed files: routes={}, stops={}, calendars={}, calendarDates={}, trips={}, stopTimes={}",
                 routes.size(), stops.size(), calendars.size(), calendarDates.size(), trips.size(), stopTimes.size());
@@ -100,7 +98,7 @@ class StaticGtfsImporter {
                 VALUES (?, ?, ?)
                 """;
 
-        jdbcTemplate.batchUpdate(sql, trips, tripsBatchSize, (ps, t) -> {
+        jdbcTemplate.batchUpdate(sql, trips, props.jdbcBatch().trips(), (ps, t) -> {
             ps.setString(1, t.getTripId());
             ps.setString(2, t.getRouteId());
             ps.setString(3, t.getServiceId());
@@ -120,7 +118,7 @@ class StaticGtfsImporter {
                 VALUES (nextval('stop_times_seq'), ?, ?, ?, ?, ?)
                 """;
 
-        jdbcTemplate.batchUpdate(sql, stopTimes, stopTimesBatchSize, (ps, st) -> {
+        jdbcTemplate.batchUpdate(sql, stopTimes, props.jdbcBatch().stopTimes(), (ps, st) -> {
             ps.setString(1, st.getTripId());
             ps.setString(2, st.getStopId());
             ps.setTime(3, Time.valueOf(st.getArrivalTime()));

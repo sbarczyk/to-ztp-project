@@ -47,20 +47,12 @@ class StaticGtfsServiceTest {
 
     @BeforeEach
     void setUp() {
-        GtfsProperties.StaticProperties staticProps = new GtfsProperties.StaticProperties(
-                "GTFS_KRK.zip",
-                tempDir.toString()
-        );
-
-        GtfsProperties realProps = new GtfsProperties(
-                "http://fake.url",
-                staticProps,
-                3600000L
-        );
+        GtfsProperties realProps = getGtfsTestProperties();
 
         StaticGtfsImporter importer = new StaticGtfsImporter(
                 parser,
                 jdbcTemplate,
+                realProps,
                 routeRepository,
                 stopRepository,
                 calendarRepository,
@@ -76,6 +68,26 @@ class StaticGtfsServiceTest {
                 jdbcTemplate,
                 realProps,
                 importer
+        );
+    }
+
+    private GtfsProperties getGtfsTestProperties() {
+        GtfsProperties.StaticProperties staticProps = new GtfsProperties.StaticProperties(
+                "GTFS_KRK.zip",
+                tempDir.toString(),
+                new GtfsProperties.StaticProperties.FilenameProperties(
+                        "routes.txt", "stops.txt", "calendar.txt",
+                        "calendar_dates.txt", "trips.txt", "stop_times.txt"
+                )
+        );
+
+        return new GtfsProperties(
+                "http://fake.url",
+                staticProps,
+                3600000L,
+                new GtfsProperties.JdbcBatchProperties(
+                        5000, 5000
+                )
         );
     }
 

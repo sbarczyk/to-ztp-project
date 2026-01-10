@@ -10,6 +10,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 
 @Slf4j
@@ -35,14 +36,13 @@ public class GtfsDelayService {
     }
 
     private Map<String, Long> processUpdates(List<GtfsRealtime.TripUpdate> updates) {
-        Map<String, Long> delays = new HashMap<>();
-        for (GtfsRealtime.TripUpdate tu : updates) {
-            if (tu.hasTrip() && tu.getStopTimeUpdateCount() > 0) {
-                String tripId = tu.getTrip().getTripId();
-                delays.put(tripId, extractDelayValue(tu));
-            }
-        }
-        return delays;
+        return updates.stream()
+                .filter(GtfsRealtime.TripUpdate::hasTrip)
+                .filter(update -> update.getStopTimeUpdateCount() > 0)
+                .collect(Collectors.toMap(
+                        update -> update.getTrip().getTripId(),
+                        this::extractDelayValue
+                ));
     }
 
     private long extractDelayValue(GtfsRealtime.TripUpdate tu) {
