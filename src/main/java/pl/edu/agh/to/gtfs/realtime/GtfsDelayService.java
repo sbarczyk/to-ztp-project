@@ -7,7 +7,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -19,12 +18,10 @@ import java.util.stream.Collectors;
 public class GtfsDelayService {
 
     private final GtfsClient gtfsClient;
-    private final GtfsParser gtfsParser;
 
     public Map<String, Long> getCurrentDelays() {
         try {
-            byte[] data = gtfsClient.fetchTripUpdatesAsBytes();
-            List<GtfsRealtime.TripUpdate> updates = gtfsParser.parseTripUpdates(data);
+            List<GtfsRealtime.TripUpdate> updates = gtfsClient.fetchTripUpdates();
             return processUpdates(updates);
         } catch (InvalidProtocolBufferException e) {
             log.warn("GTFS Realtime parsing failed (Protobuf error). Falling back to zero delays. Details: {}", e.getMessage());

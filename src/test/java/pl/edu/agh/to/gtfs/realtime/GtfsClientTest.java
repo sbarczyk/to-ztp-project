@@ -1,5 +1,7 @@
-package pl.edu.agh.to.service;
+package pl.edu.agh.to.gtfs.realtime;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.transit.realtime.GtfsRealtime;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -7,12 +9,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.reactive.function.client.WebClient;
 import pl.edu.agh.to.exceptions.ExternalServiceException;
-import pl.edu.agh.to.gtfs.realtime.GtfsClient;
 import reactor.core.publisher.Mono;
+
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
@@ -20,6 +23,9 @@ import static org.mockito.Mockito.when;
 class GtfsClientTest {
     @Mock
     private WebClient webClient;
+
+    @Mock
+    private GtfsParser gtfsParser;
 
     @SuppressWarnings("rawtypes")
     @Mock
@@ -32,24 +38,29 @@ class GtfsClientTest {
     @Mock
     private WebClient.ResponseSpec responseSpec;
 
+    @Mock
+    private GtfsRealtime.TripUpdate tripUpdate;
+
     @InjectMocks
     private GtfsClient gtfsClient;
 
     @Test
-    void shouldReturnByteArray_givenWebClientReturnsData_whenFetchTripUpdatesAsBytes_thenCorrectBytesReturned() {
+    void givenWebClientReturnsData_whenFetchTripUpdates_thenCorrectUpdateReturned() throws InvalidProtocolBufferException {
         // given
-        byte[] expectedBytes = new byte[]{1, 2, 3, 4};
+        byte[] someBytes = new byte[]{1, 2, 3, 4};
+        List<GtfsRealtime.TripUpdate> updates = List.of(tripUpdate);
 
         when(webClient.get()).thenReturn(uriSpec);
         when(uriSpec.uri(anyString())).thenReturn(headersSpec);
         when(headersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.bodyToMono(byte[].class)).thenReturn(Mono.just(expectedBytes));
+        when(responseSpec.bodyToMono(byte[].class)).thenReturn(Mono.just(someBytes));
+        when(gtfsParser.parseTripUpdates(someBytes)).thenReturn(updates);
 
         // when
-        byte[] result = gtfsClient.fetchTripUpdatesAsBytes();
+        List<GtfsRealtime.TripUpdate> result = gtfsClient.fetchTripUpdates();
 
         // then
-        assertArrayEquals(expectedBytes, result);
+        assertEquals(updates, result);
     }
 
     @Test
@@ -60,7 +71,7 @@ class GtfsClientTest {
         when(responseSpec.bodyToMono(byte[].class)).thenReturn(null);
 
         // when
-        Throwable thrown = catchThrowable(() -> gtfsClient.fetchTripUpdatesAsBytes());
+        Throwable thrown = catchThrowable(() -> gtfsClient.fetchTripUpdates());
 
         // then
         assertThat(thrown).isInstanceOf(ExternalServiceException.class);
