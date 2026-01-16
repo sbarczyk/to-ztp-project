@@ -1,9 +1,11 @@
 package pl.edu.agh.to.integration;
 
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.sun.jdi.connect.spi.TransportService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -12,6 +14,7 @@ import pl.edu.agh.to.exceptions.ExternalServiceException;
 import pl.edu.agh.to.exceptions.NotFoundException;
 import pl.edu.agh.to.model.RandomDepartureDto;
 import pl.edu.agh.to.model.RouteSearchResultDto;
+import pl.edu.agh.to.service.AIToolsService;
 import pl.edu.agh.to.service.RandomDepartureService;
 import pl.edu.agh.to.service.RouteService;
 
@@ -35,6 +38,8 @@ class TransportControllerIntegrationTest {
     private RandomDepartureService randomDepartureService;
     @MockitoBean
     private RouteService routeService;
+    @MockitoBean
+    private AIToolsService aiToolsService;
 
     private static final String RANDOM_DEPARTURE_ENDPOINT = "/random-departure";
     private static final String FASTEST_ROUTE_ENDPOINT = "/route/fastest";
