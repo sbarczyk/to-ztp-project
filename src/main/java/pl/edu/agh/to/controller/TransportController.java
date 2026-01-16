@@ -3,31 +3,32 @@ package pl.edu.agh.to.controller;
 import com.google.protobuf.InvalidProtocolBufferException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import pl.edu.agh.to.model.RandomDepartureDto;
+import pl.edu.agh.to.model.RouteSearchResultDto;
 import pl.edu.agh.to.service.RandomDepartureService;
-
+import pl.edu.agh.to.service.RouteService;
 
 @RestController
 @RequiredArgsConstructor
 public class TransportController {
 
     private final RandomDepartureService randomDepartureService;
+    private final RouteService routeService;
 
     @GetMapping("/")
     public String home() {
         return "Transport service is running!";
     }
 
-    /**
-     * Returns random departure information fetched from the GTFS API.
-     *
-     * @return RandomDepartureDto containing vehicle, stop, and time.
-     * @throws InvalidProtocolBufferException if GTFS data is corrupted.
-     */
     @GetMapping("/random-departure")
     public RandomDepartureDto randomDeparture() throws InvalidProtocolBufferException {
         return randomDepartureService.getRandomDepartureInfo();
     }
 
+    @GetMapping("/route/fastest")
+    public RouteSearchResultDto getFastestRoute(@RequestParam String start, @RequestParam String end) {
+        return routeService.findFastestConnection(start, end);
+    }
 }

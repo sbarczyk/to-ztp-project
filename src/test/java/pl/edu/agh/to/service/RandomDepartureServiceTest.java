@@ -5,11 +5,13 @@ import com.google.transit.realtime.GtfsRealtime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import pl.edu.agh.to.exceptions.NotFoundException;
+import pl.edu.agh.to.gtfs.realtime.GtfsClient;
+import pl.edu.agh.to.gtfs.realtime.GtfsParser;
 import pl.edu.agh.to.model.RandomDepartureDto;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Random;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -57,7 +59,7 @@ class RandomDepartureServiceTest {
     }
 
     @Test
-    void shouldThrowException_givenNoTrips_thenNoSuchElementThrown() throws Exception {
+    void shouldThrowException_givenNoTrips_thenNotFoundThrown() throws Exception {
         // given
         when(client.fetchTripUpdatesAsBytes()).thenReturn(new byte[]{});
         when(parser.parseTripUpdates(Mockito.any()))
@@ -67,11 +69,11 @@ class RandomDepartureServiceTest {
         Throwable thrown = catchThrowable(() -> service.getRandomDepartureInfo());
 
         // then
-        assertThat(thrown).isInstanceOf(NoSuchElementException.class);
+        assertThat(thrown).isInstanceOf(NotFoundException.class);
     }
 
     @Test
-    void shouldThrowException_givenNoStops_thenNoSuchElementThrown() throws Exception {
+    void shouldThrowException_givenNoStops_thenNotFoundThrown() throws Exception {
         // given
         when(client.fetchTripUpdatesAsBytes()).thenReturn(new byte[]{});
 
@@ -88,11 +90,11 @@ class RandomDepartureServiceTest {
         Throwable thrown = catchThrowable(() -> service.getRandomDepartureInfo());
 
         // then
-        assertThat(thrown).isInstanceOf(NoSuchElementException.class);
+        assertThat(thrown).isInstanceOf(NotFoundException.class);
     }
 
     @Test
-    void shouldThrowException_givenStopWithoutDepartureTime_thenNoSuchElementThrown() throws Exception {
+    void shouldThrowException_givenStopWithoutDepartureTime_thenNotFoundThrown() throws Exception {
         // given
         when(client.fetchTripUpdatesAsBytes()).thenReturn(new byte[]{});
 
@@ -115,7 +117,7 @@ class RandomDepartureServiceTest {
         Throwable thrown = catchThrowable(() -> service.getRandomDepartureInfo());
 
         // then
-        assertThat(thrown).isInstanceOf(NoSuchElementException.class);
+        assertThat(thrown).isInstanceOf(NotFoundException.class);
     }
 
     @Test

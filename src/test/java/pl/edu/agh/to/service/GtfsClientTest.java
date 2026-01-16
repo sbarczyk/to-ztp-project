@@ -6,8 +6,12 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.reactive.function.client.WebClient;
+import pl.edu.agh.to.exceptions.ExternalServiceException;
+import pl.edu.agh.to.gtfs.realtime.GtfsClient;
 import reactor.core.publisher.Mono;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
@@ -17,7 +21,7 @@ class GtfsClientTest {
     @Mock
     private WebClient webClient;
 
-    @SuppressWarnings("rawtypes") // because thenReturn can't match wild type <?>
+    @SuppressWarnings("rawtypes")
     @Mock
     private WebClient.RequestHeadersSpec headersSpec;
 
@@ -46,5 +50,19 @@ class GtfsClientTest {
 
         // then
         assertArrayEquals(expectedBytes, result);
+    }
+
+    @Test
+    void shouldThrowExternalServiceException_whenFetchedTripUpdatesIsNull() {
+        when(webClient.get()).thenReturn(uriSpec);
+        when(uriSpec.uri(anyString())).thenReturn(headersSpec);
+        when(headersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.bodyToMono(byte[].class)).thenReturn(null);
+
+        // when
+        Throwable thrown = catchThrowable(() -> gtfsClient.fetchTripUpdatesAsBytes());
+
+        // then
+        assertThat(thrown).isInstanceOf(ExternalServiceException.class);
     }
 }

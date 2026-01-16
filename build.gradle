@@ -39,6 +39,11 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'io.projectreactor:reactor-test'
     testImplementation 'org.wiremock:wiremock-standalone:3.3.1'
+    testImplementation 'org.mockito:mockito-inline:5.2.0'
+
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    runtimeOnly 'org.postgresql:postgresql'
+    runtimeOnly("io.netty:netty-resolver-dns-native-macos:4.1.128.Final:osx-aarch_64")
 }
 
 tasks.named('test') {

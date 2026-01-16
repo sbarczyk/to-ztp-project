@@ -36,4 +36,5 @@ target/
 *.tar.gz
 *.rar
 
-projekt TO-1.pdf
+pdfs/
+data/
