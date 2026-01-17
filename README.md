@@ -30,7 +30,7 @@ Group 6.
    { "jsonrpc": "2.0", "id": 1, "method": "initialize", "params": { "protocolVersion": "2024-11-05", "capabilities": { "roots": { "listChanged": true }, "sampling": {}, "elicitation": { "form": {}, "url": {} }, "tasks": { "requests": { "elicitation": { "create": {} }, "sampling": { "createMessage": {} } } } }, "clientInfo": { "name": "ExampleClient", "title": "Example Client Display Name", "version": "1.0.0", "description": "An example MCP client application", "icons": [ { "src": "https://example.com/icon.png", "mimeType": "image/png", "sizes": ["48x48"] } ], "websiteUrl": "https://example.com" } } }
    { "jsonrpc": "2.0", "method": "notifications/initialized" }
    { "jsonrpc":"2.0","id":2,"method":"tools/list","params":{} }
-   { "jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"getAllStops","arguments":{}} }
+   {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"getAllStops","arguments":{"limit":5}}}
    ```
 
 ---

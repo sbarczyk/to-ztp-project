@@ -35,6 +35,7 @@ dependencies {
     implementation 'org.springframework.ai:spring-ai-starter-mcp-server'
     implementation 'org.springframework:spring-web'
     implementation 'com.google.protobuf:protobuf-java:3.25.1'
+    implementation("org.springframework.boot:spring-boot-starter-validation")
 
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
