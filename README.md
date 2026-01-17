@@ -21,6 +21,18 @@ Group 6.
    The application is started as a standard Spring Boot application:
    - from an IDE (by running the `main` class)
 
+3. **Using the MCP Server**
+
+   Follow the MCP standard for proper connection with stdio communication as described [here](https://modelcontextprotocol.io/specification/draft/basic/lifecycle).
+   Our server supports the 2024-11-05 protocol version. Here is an example of good order of requests - remember to send each one of them separately:
+
+   ```json
+   { "jsonrpc": "2.0", "id": 1, "method": "initialize", "params": { "protocolVersion": "2024-11-05", "capabilities": { "roots": { "listChanged": true }, "sampling": {}, "elicitation": { "form": {}, "url": {} }, "tasks": { "requests": { "elicitation": { "create": {} }, "sampling": { "createMessage": {} } } } }, "clientInfo": { "name": "ExampleClient", "title": "Example Client Display Name", "version": "1.0.0", "description": "An example MCP client application", "icons": [ { "src": "https://example.com/icon.png", "mimeType": "image/png", "sizes": ["48x48"] } ], "websiteUrl": "https://example.com" } } }
+   { "jsonrpc": "2.0", "method": "notifications/initialized" }
+   { "jsonrpc":"2.0","id":2,"method":"tools/list","params":{} }
+   { "jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"getAllStops","arguments":{}} }
+   ```
+
 ---
 
 ## Implemented Milestone
@@ -36,6 +48,7 @@ The following functionalities required for **Milestone 1** have been successfull
   - a random stop
   - a random vehicle
   - and the departure time of a randomly selected bus or tram
+
 ---
 
 ### Milestone 2 – Completed
@@ -64,6 +77,11 @@ The following functionalities required for **Milestone 2** have been successfull
 - Combined processing of **GTFS Static + GTFS Realtime** data to determine the optimal connection
 
 ---
+
+### Milestone 3 – In progress
+
+
+(...)
 
 ## Authors
 
