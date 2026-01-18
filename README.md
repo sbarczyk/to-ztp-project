@@ -31,6 +31,8 @@ Group 6.
    { "jsonrpc": "2.0", "method": "notifications/initialized" }
    { "jsonrpc":"2.0","id":2,"method":"tools/list","params":{} }
    {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"getAllStops","arguments":{"limit":5}}}
+   {"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"findFastestConnections","arguments":{"startStop":"Teatr Bagatela","endStop":"Bronowice Małe"}}}
+   {"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"getNextDepartures","arguments":{"stopName":"Teatr Bagatela","lineNumber":"4"}}}
    ```
 
 ---
