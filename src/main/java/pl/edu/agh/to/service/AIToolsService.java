@@ -5,6 +5,7 @@ import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Service;
 import pl.edu.agh.to.model.ConnectionDto;
+import pl.edu.agh.to.model.NextDepartureDto;
 import pl.edu.agh.to.model.StopNamesSliceDto;
 
 import java.time.LocalTime;
@@ -37,5 +38,13 @@ public class AIToolsService {
     ) {
         LocalTime departureTime = (time != null) ? LocalTime.parse(time) : LocalTime.now();
         return mcpRouteService.findTop3Connections(startStop, endStop, departureTime);
+    }
+
+    @Tool(description = "Get next 5 departures for a specific stop and line number.")
+    public List<NextDepartureDto> getNextDepartures(
+            @ToolParam(description = "Name of the stop (e.g., 'Teatr Bagatela').") String stopName,
+            @ToolParam(description = "Line number (e.g., '4', '139').") String lineNumber
+    ) {
+        return mcpRouteService.getNextDepartures(stopName, lineNumber);
     }
 }

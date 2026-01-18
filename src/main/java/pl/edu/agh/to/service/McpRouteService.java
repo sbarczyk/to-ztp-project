@@ -139,4 +139,58 @@ public class McpRouteService {
         }
         return standardServices;
     }
+
+
+    @Transactional(readOnly = true)
+    public List<NextDepartureDto> getNextDepartures(String stopName, String lineNumber) {
+        log.info(">>> Szukam odjazdów linii {} z przystanku {}", lineNumber, stopName);
+
+        // 1. Znajdź ID przystanków
+        List<String> stopIds = getStopIds(stopName);
+        if (stopIds.isEmpty()) return List.of();
+
+        // 2. Pobierz aktywny kalendarz
+        LocalDate today = LocalDate.now();
+        LocalTime now = LocalTime.now();
+        List<String> activeServices = getActiveServiceIds(today);
+        Map<String, Long> delays = delayService.getCurrentDelays();
+
+        // 3. Zapytanie do bazy (limit 5 wyników)
+        List<Object[]> results = stopTimeRepository.findNextDeparturesForLine(
+                stopIds,
+                lineNumber,
+                now,
+                activeServices,
+                PageRequest.of(0, 5)
+        );
+
+        // 4. Mapowanie wyników
+        return results.stream()
+                .map(row -> mapToNextDepartureDto(row, delays))
+                .toList();
+    }
+
+    private NextDepartureDto mapToNextDepartureDto(Object[] row, Map<String, Long> delays) {
+        StopTime st = (StopTime) row[0];
+        Trip trip = (Trip) row[1];
+        Route route = (Route) row[2];
+
+        long delaySeconds = delays.getOrDefault(trip.getTripId(), 0L);
+        int delayMinutes = (int) (delaySeconds / 60);
+
+        LocalTime scheduled = st.getDepartureTime();
+        LocalTime predicted = scheduled.plusSeconds(delaySeconds);
+
+        // Obsługa braku headsign (tak jak wcześniej ustaliliśmy)
+        // String direction = (trip.getHeadsign() != null) ? trip.getHeadsign() : "Nieznany";
+        String direction = "Kierunek Trasy"; // Lub pobranie z Trip, jeśli pole jest odkomentowane
+
+        return new NextDepartureDto(
+                route.getRouteShortName(),
+                direction,
+                scheduled,
+                predicted,
+                delayMinutes
+        );
+    }
 }

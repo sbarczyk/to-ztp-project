@@ -34,4 +34,23 @@ public interface StopTimeRepository extends JpaRepository<StopTime, Long> {
             List<String> activeServices,
             Pageable pageable
     );
+
+    @Query("""
+        SELECT st, t, r
+        FROM StopTime st
+        JOIN Trip t ON t.tripId = st.tripId
+        JOIN Route r ON r.routeId = t.routeId
+        WHERE st.stopId IN :stopIds
+          AND r.routeShortName = :lineNumber
+          AND st.departureTime >= :startTime
+          AND t.serviceId IN :activeServices
+        ORDER BY st.departureTime ASC
+    """)
+    List<Object[]> findNextDeparturesForLine(
+            List<String> stopIds,
+            String lineNumber,
+            LocalTime startTime,
+            List<String> activeServices,
+            Pageable pageable
+    );
 }
