@@ -26,4 +26,8 @@ public class Trip {
 
     @Column(name = "service_id", nullable = false)
     private String serviceId;
+
+
+//    @Column(name = "trip_headsign")
+//    private String headsign;
 }
