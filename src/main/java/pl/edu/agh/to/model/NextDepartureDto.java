@@ -1,11 +1,13 @@
 package pl.edu.agh.to.model;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 import java.time.LocalTime;
 
 public record NextDepartureDto(
-        String lineNumber,       // np. "4"
-        String direction,        // np. "Bronowice Małe"
-        LocalTime scheduledTime, // Rozkładowo: 14:15
-        LocalTime predictedTime, // Rzeczywiście: 14:17
-        int delayMinutes         // Opóźnienie: 2 min
-) {}
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm")
+        LocalTime scheduledDeparture,
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm")
+        LocalTime predictedDeparture,
+        long delaySeconds
+) { }

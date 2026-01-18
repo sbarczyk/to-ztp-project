@@ -11,4 +11,6 @@ import java.util.List;
 public interface CalendarDateRepository extends JpaRepository<CalendarDate, Long> {
 
     List<CalendarDate> findByServiceIdAndDate(String serviceId, LocalDate date);
+
+    List<CalendarDate> findByDate(LocalDate date);
 }

@@ -4,47 +4,58 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Service;
-import pl.edu.agh.to.model.ConnectionDto;
-import pl.edu.agh.to.model.NextDepartureDto;
+import pl.edu.agh.to.model.ConnectionsResponseDto;
+import pl.edu.agh.to.model.DeparturesResponseDto;
 import pl.edu.agh.to.model.StopNamesSliceDto;
-
-import java.time.LocalTime;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class AIToolsService {
 
     private final StopListingService stopListingService;
-    private final McpRouteService mcpRouteService;
+    private final McpConnectionsService mcpConnectionsService;
+    private final McpDeparturesService mcpDeparturesService;
+    private final DateTimeParamParser dateTimeParser;
 
-    @Tool(description = "List unique stop names in Krakow using cursor-based pagination. Optional prefix filter by stop name.")
-    public StopNamesSliceDto getAllStops(
-            @ToolParam(description = "Optional stop name prefix filter (case-insensitive). Example: \"Krak\".", required = false)
+    @Tool(description = "List stop names in Krakow (unique names) using cursor-based pagination.")
+    public StopNamesSliceDto listStops(
+            @ToolParam(description = "Optional stop name prefix filter.", required = false)
             String query,
-            @ToolParam(description = "Max number of results to return (1..max). Default from config.", required = false)
+            @ToolParam(description = "Max number of names to return.", required = false)
             Integer limit,
-            @ToolParam(description = "Last stop name from previous response; pass it to get the next batch.", required = false)
+            @ToolParam(description = "Continuation marker from previous response.", required = false)
             String lastStopName
     ) {
         return stopListingService.listStopNames(query, limit, lastStopName);
     }
 
-    @Tool(description = "Find top 3 fastest connections between two stops considering delays.")
-    public List<ConnectionDto> findFastestConnections(
-            @ToolParam(description = "Name of the start stop.") String startStop,
-            @ToolParam(description = "Name of the destination stop.") String endStop,
-            @ToolParam(description = "Optional departure time (HH:mm). Default is now.", required = false) String time
+    @Tool(description = "Find up to 3 direct connections that depart soonest between two stops, including delays.")
+    public ConnectionsResponseDto findFastestConnections(
+            @ToolParam(description = "Start stop name.") String fromStop,
+            @ToolParam(description = "Destination stop name.") String toStop,
+            @ToolParam(description = "Optional date (yyyy-MM-dd).", required = false) String date,
+            @ToolParam(description = "Optional time (HH:mm or HH:mm:ss).", required = false) String time
     ) {
-        LocalTime departureTime = (time != null) ? LocalTime.parse(time) : LocalTime.now();
-        return mcpRouteService.findTop3Connections(startStop, endStop, departureTime);
+        return mcpConnectionsService.findTop3Connections(
+                fromStop,
+                toStop,
+                dateTimeParser.parseDateOrNull(date),
+                dateTimeParser.parseTimeOrNull(time)
+        );
     }
 
-    @Tool(description = "Get next 5 departures for a specific stop and line number.")
-    public List<NextDepartureDto> getNextDepartures(
-            @ToolParam(description = "Name of the stop (e.g., 'Teatr Bagatela').") String stopName,
-            @ToolParam(description = "Line number (e.g., '4', '139').") String lineNumber
+    @Tool(description = "Show next 5 departures for a given stop and line, including delays.")
+    public DeparturesResponseDto listNextDepartures(
+            @ToolParam(description = "Stop name.") String stopName,
+            @ToolParam(description = "Line number.") String lineNumber,
+            @ToolParam(description = "Optional date (yyyy-MM-dd).", required = false) String date,
+            @ToolParam(description = "Optional time (HH:mm or HH:mm:ss).", required = false) String time
     ) {
-        return mcpRouteService.getNextDepartures(stopName, lineNumber);
+        return mcpDeparturesService.getNext5Departures(
+                stopName,
+                lineNumber,
+                dateTimeParser.parseDateOrNull(date),
+                dateTimeParser.parseTimeOrNull(time)
+        );
     }
 }
