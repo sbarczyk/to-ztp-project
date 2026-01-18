@@ -1,20 +1,20 @@
-package pl.edu.agh.to.service;
+package pl.edu.agh.to.mcp;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Service;
-import pl.edu.agh.to.model.ConnectionsResponseDto;
-import pl.edu.agh.to.model.DeparturesResponseDto;
-import pl.edu.agh.to.model.StopNamesSliceDto;
+import pl.edu.agh.to.dto.ConnectionsResponseDto;
+import pl.edu.agh.to.dto.DeparturesResponseDto;
+import pl.edu.agh.to.dto.StopNamesSliceDto;
 
 @Service
 @RequiredArgsConstructor
-public class AIToolsService {
+public class McpToolsController {
 
     private final StopListingService stopListingService;
-    private final McpConnectionsService mcpConnectionsService;
-    private final McpDeparturesService mcpDeparturesService;
+    private final ConnectionSearchService connectionSearchService;
+    private final NextDeparturesService nextDeparturesService;
     private final DateTimeParamParser dateTimeParser;
 
     @Tool(description = "List stop names in Krakow (unique names) using cursor-based pagination.")
@@ -36,7 +36,7 @@ public class AIToolsService {
             @ToolParam(description = "Optional date (yyyy-MM-dd).", required = false) String date,
             @ToolParam(description = "Optional time (HH:mm or HH:mm:ss).", required = false) String time
     ) {
-        return mcpConnectionsService.findTop3Connections(
+        return connectionSearchService.findTop3Connections(
                 fromStop,
                 toStop,
                 dateTimeParser.parseDateOrNull(date),
@@ -51,7 +51,7 @@ public class AIToolsService {
             @ToolParam(description = "Optional date (yyyy-MM-dd).", required = false) String date,
             @ToolParam(description = "Optional time (HH:mm or HH:mm:ss).", required = false) String time
     ) {
-        return mcpDeparturesService.getNext5Departures(
+        return nextDeparturesService.getNext5Departures(
                 stopName,
                 lineNumber,
                 dateTimeParser.parseDateOrNull(date),

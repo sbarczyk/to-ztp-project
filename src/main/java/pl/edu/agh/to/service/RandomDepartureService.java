@@ -7,7 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import pl.edu.agh.to.exceptions.NotFoundException;
 import pl.edu.agh.to.gtfs.realtime.GtfsClient;
-import pl.edu.agh.to.model.RandomDepartureDto;
+import pl.edu.agh.to.dto.RandomDepartureDto;
 
 import java.time.Instant;
 import java.time.LocalDateTime;

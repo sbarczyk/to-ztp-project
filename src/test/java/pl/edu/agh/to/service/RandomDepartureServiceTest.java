@@ -6,8 +6,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import pl.edu.agh.to.exceptions.NotFoundException;
 import pl.edu.agh.to.gtfs.realtime.GtfsClient;
-import pl.edu.agh.to.gtfs.realtime.GtfsParser;
-import pl.edu.agh.to.model.RandomDepartureDto;
+import pl.edu.agh.to.dto.RandomDepartureDto;
 
 import java.time.Instant;
 import java.util.List;

@@ -5,7 +5,7 @@ import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
-import pl.edu.agh.to.service.AIToolsService;
+import pl.edu.agh.to.mcp.McpToolsController;
 
 @SpringBootApplication
 public class ToZtpApplication {
@@ -15,7 +15,7 @@ public class ToZtpApplication {
     }
 
     @Bean
-    public ToolCallbackProvider aiTools(AIToolsService aiToolsService) {
-        return MethodToolCallbackProvider.builder().toolObjects(aiToolsService).build();
+    public ToolCallbackProvider aiTools(McpToolsController mcpToolsController) {
+        return MethodToolCallbackProvider.builder().toolObjects(mcpToolsController).build();
     }
 }

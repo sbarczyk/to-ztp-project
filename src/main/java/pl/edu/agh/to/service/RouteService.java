@@ -9,7 +9,7 @@ import pl.edu.agh.to.exceptions.NotFoundException;
 import pl.edu.agh.to.gtfs.realtime.GtfsDelayService;
 import pl.edu.agh.to.model.CalendarDate;
 import pl.edu.agh.to.model.Route;
-import pl.edu.agh.to.model.RouteSearchResultDto;
+import pl.edu.agh.to.dto.RouteSearchResultDto;
 import pl.edu.agh.to.model.Stop;
 import pl.edu.agh.to.model.StopTime;
 import pl.edu.agh.to.model.Trip;

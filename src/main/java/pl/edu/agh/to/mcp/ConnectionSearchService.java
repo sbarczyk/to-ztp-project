@@ -1,4 +1,4 @@
-package pl.edu.agh.to.service;
+package pl.edu.agh.to.mcp;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -6,14 +6,15 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pl.edu.agh.to.gtfs.realtime.GtfsDelayService;
-import pl.edu.agh.to.model.ConnectionDto;
-import pl.edu.agh.to.model.ConnectionsResponseDto;
+import pl.edu.agh.to.dto.ConnectionDto;
+import pl.edu.agh.to.dto.ConnectionsResponseDto;
 import pl.edu.agh.to.model.Route;
 import pl.edu.agh.to.model.Stop;
 import pl.edu.agh.to.model.StopTime;
 import pl.edu.agh.to.model.Trip;
 import pl.edu.agh.to.repository.StopRepository;
 import pl.edu.agh.to.repository.StopTimeRepository;
+import pl.edu.agh.to.service.ActiveServiceResolver;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -23,7 +24,7 @@ import java.util.Map;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class McpConnectionsService {
+public class ConnectionSearchService {
 
     private final StopTimeRepository stopTimeRepository;
     private final StopRepository stopRepository;

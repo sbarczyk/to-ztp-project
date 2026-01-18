@@ -12,8 +12,6 @@ import java.util.List;
 @Repository
 public interface StopTimeRepository extends JpaRepository<StopTime, Long> {
 
-    // Zapytanie szukające par: Przystanek Startowy -> Przystanek Końcowy w ramach jednego Tripa
-    // Zwraca: [0]StopTimeStart, [1]StopTimeEnd, [2]Trip, [3]Route
     @Query("""
         SELECT stA, stB, t, r
         FROM StopTime stA
@@ -28,8 +26,8 @@ public interface StopTimeRepository extends JpaRepository<StopTime, Long> {
         ORDER BY stA.departureTime ASC
     """)
     List<Object[]> findNextDepartures(
-            List<String> startIds,      // <-- ZMIANA: Lista ID zamiast nazwy
-            List<String> endIds,        // <-- ZMIANA: Lista ID zamiast nazwy
+            List<String> startIds,
+            List<String> endIds,
             LocalTime startTime,
             List<String> activeServices,
             Pageable pageable

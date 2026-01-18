@@ -6,8 +6,8 @@ import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWeb
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import pl.edu.agh.to.exceptions.ApiError;
-import pl.edu.agh.to.model.RandomDepartureDto;
-import pl.edu.agh.to.model.RouteSearchResultDto;
+import pl.edu.agh.to.dto.RandomDepartureDto;
+import pl.edu.agh.to.dto.RouteSearchResultDto;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureWebTestClient

@@ -1,4 +1,4 @@
-package pl.edu.agh.to.service;
+package pl.edu.agh.to.mcp;
 
 import org.springframework.stereotype.Component;
 import pl.edu.agh.to.exceptions.BadRequestException;

@@ -1,4 +1,4 @@
-package pl.edu.agh.to.model;
+package pl.edu.agh.to.dto;
 
 import lombok.Builder;
 import lombok.Value;

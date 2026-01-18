@@ -1,11 +1,11 @@
-package pl.edu.agh.to.service;
+package pl.edu.agh.to.mcp;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import pl.edu.agh.to.config.McpStopsProperties;
 import pl.edu.agh.to.exceptions.BadRequestException;
-import pl.edu.agh.to.model.StopNamesSliceDto;
+import pl.edu.agh.to.dto.StopNamesSliceDto;
 import pl.edu.agh.to.repository.StopRepository;
 
 import java.util.List;
