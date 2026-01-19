@@ -49,19 +49,14 @@ class NextDeparturesServiceTest {
         LocalDate date = LocalDate.now();
         LocalTime time = LocalTime.of(10, 0);
 
-        // Mockowanie przystanku
         when(stopRepository.findByName(stopName)).thenReturn(List.of(new Stop("s1", stopName, 0, 0)));
 
-        // Mockowanie serwisów
         when(activeServiceResolver.getActiveServiceIds(date)).thenReturn(List.of("service1"));
 
-        // Mockowanie opóźnień (Trip T1 ma 120s opóźnienia)
         when(delayService.getCurrentDelays()).thenReturn(Map.of("T1", 120L));
 
-        // Mockowanie bazy danych
         Object[] row = createDbRow("T1", LocalTime.of(10, 5));
 
-        // UWAGA: Tutaj używamy Collections.singletonList, aby naprawić błąd z poprzedniego screena (image_f7f22a.png)
         when(stopTimeRepository.findNextDeparturesForLine(
                 eq(List.of("s1")),
                 eq("4"),
@@ -80,7 +75,6 @@ class NextDeparturesServiceTest {
         assertThat(dep.scheduledDeparture()).isEqualTo(LocalTime.of(10, 5));
         assertThat(dep.predictedDeparture()).isEqualTo(LocalTime.of(10, 7)); // 10:05 + 2min
 
-        // delaySeconds() jest ok, bo pole nazywa się tak samo
         assertThat(dep.delaySeconds()).isEqualTo(120L);
     }
 
@@ -106,7 +100,6 @@ class NextDeparturesServiceTest {
         assertThat(result.departures()).isEmpty();
     }
 
-    // Helper: Struktura zgodna z mapToDeparture: [StopTime, Trip]
     private Object[] createDbRow(String tripId, LocalTime departure) {
         Trip trip = new Trip();
         trip.setTripId(tripId);

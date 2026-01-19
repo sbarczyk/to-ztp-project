@@ -37,7 +37,6 @@ class StopListingServiceTest {
 
     @BeforeEach
     void setUp() {
-        // Domyślna konfiguracja propsów dla większości testów
         lenient().when(props.defaultSize()).thenReturn(10);
         lenient().when(props.maxSize()).thenReturn(100);
     }
@@ -84,7 +83,7 @@ class StopListingServiceTest {
     @Test
     void shouldThrowExceptionWhenLimitIsExceeded() {
         // given
-        int limit = 101; // Max is 100
+        int limit = 101;
 
         // when & then
         assertThatThrownBy(() -> service.listStopNames(null, limit, null))
@@ -109,7 +108,7 @@ class StopListingServiceTest {
         service.listStopNames(null, null, null);
 
         // then
-        verify(props).defaultSize(); // Upewniamy się, że pobrano domyślny limit
+        verify(props).defaultSize();
         verify(stopRepository).findDistinctNamesAfter(eq(null), any(Pageable.class));
     }
 

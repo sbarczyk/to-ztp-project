@@ -47,7 +47,7 @@ class DateTimeParamParserTest {
     @Test
     void shouldThrowExceptionForInvalidDateFormat() {
         // given
-        String input = "20-05-2024"; // Zły format (oczekiwany yyyy-MM-dd)
+        String input = "20-05-2024";
 
         // when & then
         assertThatThrownBy(() -> parser.parseDateOrNull(input))
@@ -55,7 +55,6 @@ class DateTimeParamParserTest {
                 .hasMessageContaining("Invalid date format");
     }
 
-    // --- Testy dla czasu ---
 
     @Test
     void shouldParseValidTime() {
