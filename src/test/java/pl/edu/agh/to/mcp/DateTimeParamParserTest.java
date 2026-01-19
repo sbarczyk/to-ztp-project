@@ -1,0 +1,103 @@
+package pl.edu.agh.to.mcp;
+
+import org.junit.jupiter.api.Test;
+import pl.edu.agh.to.exceptions.BadRequestException;
+
+import java.time.LocalDate;
+import java.time.LocalTime;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+class DateTimeParamParserTest {
+
+    private final DateTimeParamParser parser = new DateTimeParamParser();
+
+
+    @Test
+    void shouldParseValidDate() {
+        // given
+        String input = "2024-05-20";
+
+        // when
+        LocalDate result = parser.parseDateOrNull(input);
+
+        // then
+        assertThat(result).isEqualTo(LocalDate.of(2024, 5, 20));
+    }
+
+    @Test
+    void shouldReturnNullForNullDateInput() {
+        // when
+        LocalDate result = parser.parseDateOrNull(null);
+
+        // then
+        assertThat(result).isNull();
+    }
+
+    @Test
+    void shouldReturnNullForBlankDateInput() {
+        // when
+        LocalDate result = parser.parseDateOrNull("   ");
+
+        // then
+        assertThat(result).isNull();
+    }
+
+    @Test
+    void shouldThrowExceptionForInvalidDateFormat() {
+        // given
+        String input = "20-05-2024"; // Zły format (oczekiwany yyyy-MM-dd)
+
+        // when & then
+        assertThatThrownBy(() -> parser.parseDateOrNull(input))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Invalid date format");
+    }
+
+    // --- Testy dla czasu ---
+
+    @Test
+    void shouldParseValidTime() {
+        // given
+        String input = "14:30";
+
+        // when
+        LocalTime result = parser.parseTimeOrNull(input);
+
+        // then
+        assertThat(result).isEqualTo(LocalTime.of(14, 30));
+    }
+
+    @Test
+    void shouldParseValidTimeWithSeconds() {
+        // given
+        String input = "14:30:15";
+
+        // when
+        LocalTime result = parser.parseTimeOrNull(input);
+
+        // then
+        assertThat(result).isEqualTo(LocalTime.of(14, 30, 15));
+    }
+
+    @Test
+    void shouldReturnNullForNullTimeInput() {
+        // when
+        LocalTime result = parser.parseTimeOrNull(null);
+
+        // then
+        assertThat(result).isNull();
+    }
+
+    @Test
+    void shouldThrowExceptionForInvalidTimeFormat() {
+        // given
+        String input = "25:00";
+
+        // when & then
+        assertThatThrownBy(() -> parser.parseTimeOrNull(input))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Invalid time format");
+    }
+}
