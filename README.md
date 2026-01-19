@@ -105,6 +105,18 @@ Lists unique stop names using cursor-based pagination.
 { "jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": { "name": "listStops", "arguments": { "limit": 5 } } }
 ```
 
+You can add the `lastStopName` argument to continue listing from the given stop.
+
+```json
+{ "jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": { "name": "listStops", "arguments": { "limit": 10, "lastStopName": "AKF / PK" } } }
+```
+
+The returned `hasNext` will be true if there are more stops ahead to be listed and will turn false when you get to the last few alphabetically. You can see that with:
+
+```json
+{ "jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": { "name": "listStops", "arguments": { "limit": 5, "lastStopName": "Żmujdzka" } } }
+```
+
 ---
 
 ### Step 5: Find fastest connections between two stops
