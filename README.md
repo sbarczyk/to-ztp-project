@@ -1,89 +1,184 @@
 # to-ztp-project
 
-Project for the **Object-Oriented Technologies (TO)** course at **AGH University of Science and Technology**.  
-Group 6.
+Project for the **Object-Oriented Technologies (TO)** course  
+**AGH University of Science and Technology**  
+Group 6
+
+---
+
+## Project Overview
+
+The goal of this project is to build a backend system for querying public transport data
+for the city of **Kraków**, based on **GTFS Static** and **GTFS Realtime** feeds.
+
+The system evolves across milestones:
+- M1: basic server + GTFS Realtime
+- M2: GTFS Static + routing logic
+- M3: Model Context Protocol (MCP) server with AI-oriented tooling and E2E validation
 
 ---
 
 ## Setup / Project Startup
 
-1. **Starting the infrastructure (Docker)**  
-   The project root directory contains a `docker-compose.yml` file.
+### 1. Starting infrastructure (Docker)
 
-   ```bash
-   docker compose up -d
-   ```
+The project root directory contains a `docker-compose.yml` file.
 
-   This command starts the database and all other required services.
+```bash
+docker compose up -d
+```
 
-2. **Starting the application**
-
-   The application is started as a standard Spring Boot application:
-   - from an IDE (by running the `main` class)
-
-3. **Using the MCP Server**
-
-   Follow the MCP standard for proper connection with stdio communication as described [here](https://modelcontextprotocol.io/specification/draft/basic/lifecycle).
-   Our server supports the 2024-11-05 protocol version. Here is an example of good order of requests - remember to send each one of them separately:
-
-   ```json
-   { "jsonrpc": "2.0", "id": 1, "method": "initialize", "params": { "protocolVersion": "2024-11-05", "capabilities": { "roots": { "listChanged": true }, "sampling": {}, "elicitation": { "form": {}, "url": {} }, "tasks": { "requests": { "elicitation": { "create": {} }, "sampling": { "createMessage": {} } } } }, "clientInfo": { "name": "ExampleClient", "title": "Example Client Display Name", "version": "1.0.0", "description": "An example MCP client application", "icons": [ { "src": "https://example.com/icon.png", "mimeType": "image/png", "sizes": ["48x48"] } ], "websiteUrl": "https://example.com" } } }
-   { "jsonrpc": "2.0", "method": "notifications/initialized" }
-   { "jsonrpc":"2.0","id":2,"method":"tools/list","params":{} }
-   {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"listStops","arguments":{"limit":5}}}
-   {"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"findFastestConnections","arguments":{"fromStop":"Teatr Bagatela","toStop":"Bronowice Małe"}}}
-   {"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"listNextDepartures","arguments":{"stopName":"Teatr Bagatela","lineNumber":"4"}}}
-   ```
+This starts:
+- PostgreSQL database
+- all required infrastructure services
 
 ---
 
-## Implemented Milestone
+### 2. Starting the application
+
+The application is a standard **Spring Boot** project.
+
+You can start it:
+- directly from an IDE (run `ToZtpApplication`)
+- with the active Spring profile of your choice (e.g. `dev`, `test`)
+
+---
+
+## MCP Server Setup and Usage
+
+This project exposes its functionality via a **Model Context Protocol (MCP) server**
+using **stdio communication** (JSON-RPC over stdin/stdout).
+
+The server follows the MCP specification:
+https://modelcontextprotocol.io/specification/draft/basic/lifecycle
+
+Supported protocol version:
+```
+2024-11-05
+```
+
+---
+
+### MCP Connection Lifecycle (Step by Step)
+
+Each JSON message **must be sent separately as a single line**.
+
+---
+
+### Step 1: Initialize connection
+
+
+
+The client announces protocol version and capabilities.
+
+```json
+{ "jsonrpc": "2.0", "id": 1, "method": "initialize", "params": { "protocolVersion": "2024-11-05", "capabilities": {} } }
+```
+
+---
+
+### Step 2: Send initialized notification
+
+This confirms the client is ready.
+
+```json
+{ "jsonrpc": "2.0", "method": "notifications/initialized" }
+```
+
+---
+
+### Step 3: List available tools
+
+This returns all MCP tools exposed by the server.
+
+```json
+{ "jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {} }
+```
+
+---
+
+### Step 4: List stop names (pagination)
+
+Lists unique stop names using cursor-based pagination.
+
+```json
+{ "jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": { "name": "listStops", "arguments": { "limit": 5 } } }
+```
+
+---
+
+### Step 5: Find fastest connections between two stops
+
+Returns **up to 3 direct connections** that depart the soonest,
+taking **real-time delays** into account.
+
+```json
+{ "jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": { "name": "findFastestConnections", "arguments": { "fromStop": "Teatr Bagatela", "toStop": "Bronowice Małe" } } }
+```
+
+Optional parameters:
+- `date` (yyyy-MM-dd)
+- `time` (HH:mm or HH:mm:ss)
+
+---
+
+### Step 6: List next departures for a stop and line
+
+Returns **next 5 departures** for a given stop and line,
+including real-time delays.
+
+```json
+{ "jsonrpc": "2.0", "id": 5, "method": "tools/call", "params": { "name": "listNextDepartures", "arguments": { "stopName": "Teatr Bagatela", "lineNumber": "4" } } }
+```
+
+---
+
+## Implemented Milestones
 
 ### Milestone 1 – Completed
 
-The following functionalities required for **Milestone 1** have been successfully implemented:
-
-- A simple web server with at least one working endpoint
-- Fetching **GTFS Realtime (TripUpdates)** data for public transport in Kraków
-- Parsing GTFS Realtime data using **Protocol Buffers**
-- Returning, via HTTP endpoint, information about:
-  - a random stop
-  - a random vehicle
-  - and the departure time of a randomly selected bus or tram
+- Basic Spring Boot server
+- GTFS Realtime (TripUpdates) parsing using Protocol Buffers
+- REST endpoint returning:
+  - random stop
+  - random vehicle
+  - random departure time
 
 ---
 
 ### Milestone 2 – Completed
 
-The following functionalities required for **Milestone 2** have been successfully implemented:
-
-- Loading and parsing **GTFS Static** data:
-  - `stops.txt`
-  - `routes.txt`
-  - `trips.txt`
-  - `stop_times.txt`
-  - `calendar.txt`
-  - `calendar_dates.txt`
-- Persisting required GTFS Static data in a **database** to speed up queries
-- Automatic **verification of GTFS Static data freshness**:
-  - on application startup
-  - periodically during runtime with automatic refresh if changes are detected
-- REST endpoint that:
-  - accepts **current stop** and **destination stop** (names compliant with `stop_name` from `stops.txt`)
-  - returns the **vehicle that will arrive the fastest**
-  - supports **direct connections only**
-  - takes into account:
-    - days of the week based on `calendar.txt`
-    - service exceptions defined in `calendar_dates.txt`
-    - real-time delays using **GTFS Realtime**
-- Combined processing of **GTFS Static + GTFS Realtime** data to determine the optimal connection
+- Full GTFS Static parsing:
+  - stops, routes, trips, stop_times
+  - calendar and calendar_dates
+- Database persistence for fast querying
+- Automatic GTFS Static refresh
+- Routing logic for:
+  - direct connections only
+  - calendar rules and exceptions
+  - GTFS Realtime delays
 
 ---
 
-### Milestone 3 – In progress
+### Milestone 3 – Completed
 
+- MCP server based on Spring AI MCP
+- MCP tools providing:
+  - listing all unique stop names (cursor-based pagination)
+  - finding 3 fastest connections between two stops
+  - listing next 5 departures for a given stop and line
+- Real-time delay handling integrated into MCP responses
+- Clean separation between:
+  - domain logic
+  - MCP layer
+  - DTOs
+- External **E2E MCP client** communicating via stdio
+- E2E testing approach:
+  - application started as an external process
+  - MCP client sends JSON-RPC commands
+  - no mocking of repositories or services
 
-(...)
+---
 
 ## Authors
 
