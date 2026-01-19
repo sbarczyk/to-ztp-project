@@ -7,7 +7,6 @@ import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.util.ReflectionTestUtils;
 import pl.edu.agh.to.config.GtfsProperties;
 import pl.edu.agh.to.model.Route;
 import pl.edu.agh.to.model.Stop;

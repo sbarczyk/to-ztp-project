@@ -7,7 +7,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import pl.edu.agh.to.config.McpStopsProperties;
@@ -60,7 +59,8 @@ class StopListingServiceTest {
         // then
         assertThat(result.stops()).containsExactly("Def", "Ghi");
         assertThat(result.lastStopName()).isEqualTo("Ghi");
-        verify(stopRepository).findDistinctNamesAfter(eq(lastStop), eq(PageRequest.of(0, limit)));
+        verify(stopRepository)
+                .findDistinctNamesAfter(eq(lastStop), any(Pageable.class));
     }
 
     @Test

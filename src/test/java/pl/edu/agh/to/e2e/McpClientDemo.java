@@ -3,22 +3,22 @@ package pl.edu.agh.to.e2e;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
 
 public class McpClientDemo {
 
-    // TUTAJ TYLKO SPRAWDZAŁEM CZY DZIAŁA, DO USUNIĘCIA PO STWORZENIU TESTOW E2E !!!
+    // Manual check only. Remove after E2E tests are in place.
     public static void main(String[] args) throws Exception {
         Process app = AppProcessFactory.startApp(Map.of(
                 "SPRING_PROFILES_ACTIVE", "test"
         ));
 
-        Thread.sleep(3000);
-
         try (McpStdioClient mcp = new McpStdioClient(app)) {
             ObjectMapper om = new ObjectMapper();
 
-            JsonNode init = mcp.initialize(1);
+            JsonNode init = waitForMcpReady(mcp, Duration.ofSeconds(20));
             System.out.println("=== initialize ===");
             System.out.println(om.writerWithDefaultPrettyPrinter().writeValueAsString(init));
 
@@ -35,5 +35,21 @@ public class McpClientDemo {
         } finally {
             app.destroy();
         }
+    }
+
+    private static JsonNode waitForMcpReady(McpStdioClient mcp, Duration timeout) throws Exception {
+        Instant deadline = Instant.now().plus(timeout);
+        int attempts = 0;
+
+        while (Instant.now().isBefore(deadline)) {
+            attempts++;
+            try {
+                return mcp.initialize(1);
+            } catch (Exception ex) {
+                Thread.sleep(200);
+            }
+        }
+
+        throw new IllegalStateException("MCP server did not become ready within " + timeout + " (attempts=" + attempts + ")");
     }
 }

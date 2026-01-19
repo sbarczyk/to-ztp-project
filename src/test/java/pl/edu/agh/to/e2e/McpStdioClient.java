@@ -53,8 +53,6 @@ public final class McpStdioClient implements Closeable {
         return sendAndAwait(id, msg, Duration.ofSeconds(20));
     }
 
-    // ---- Internals ----
-
     private Map<String, Object> jsonrpcRequest(int id, String method, Map<String, Object> extra) {
         Map<String, Object> msg = new LinkedHashMap<>();
         msg.put("jsonrpc", "2.0");
@@ -102,7 +100,8 @@ public final class McpStdioClient implements Closeable {
             JsonNode json;
             try {
                 json = mapper.readTree(line);
-            } catch (Exception ignored) {
+            } catch (IOException ignored) {
+                // Ignore malformed/partial JSON lines while waiting for the expected response
                 continue;
             }
 
@@ -125,8 +124,19 @@ public final class McpStdioClient implements Closeable {
 
     @Override
     public void close() {
-        try { stdin.close(); } catch (Exception ignored) { }
-        try { stdout.close(); } catch (Exception ignored) { }
+        closeQuietly(stdin);
+        closeQuietly(stdout);
         process.destroy();
+    }
+
+    private void closeQuietly(Closeable c) {
+        if (c == null) {
+            return;
+        }
+        try {
+            c.close();
+        } catch (IOException ignored) {
+            // Best-effort cleanup
+        }
     }
 }

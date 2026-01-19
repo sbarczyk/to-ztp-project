@@ -21,8 +21,6 @@ public final class AppProcessFactory {
 
         ProcessBuilder pb = new ProcessBuilder(cmd);
 
-//        pb.redirectErrorStream(true);
-
         if (env != null) {
             pb.environment().putAll(env);
         }
