@@ -7,11 +7,13 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class MCPServerE2ETest {
@@ -20,6 +22,7 @@ class MCPServerE2ETest {
 
     private Process app;
     private McpStdioClient mcp;
+    private JsonNode init;
 
     @BeforeAll
     void startServerOnce() throws Exception {
@@ -28,10 +31,7 @@ class MCPServerE2ETest {
         ));
 
         mcp = new McpStdioClient(app);
-
-        JsonNode init = waitForMcpReady(mcp, Duration.ofSeconds(20));
-        System.out.println("initialize: " + om.writerWithDefaultPrettyPrinter().writeValueAsString(init));
-
+        init = waitForMcpReady(mcp, Duration.ofSeconds(20));
         mcp.initializedNotification();
     }
 
@@ -44,7 +44,7 @@ class MCPServerE2ETest {
             try {
                 return mcp.initialize(1);
             } catch (Exception ex) {
-                Thread.sleep(200);
+                await().atMost(Duration.ofMillis(200)).until(() -> Instant.now().isAfter(deadline));
             }
         }
 
@@ -54,7 +54,7 @@ class MCPServerE2ETest {
     @AfterAll
     void stopServerOnce() {
         if (mcp != null) {
-            try { mcp.close(); } catch (Exception ignored) {}
+            mcp.close();
         }
         if (app != null) {
             app.destroy();
@@ -62,28 +62,62 @@ class MCPServerE2ETest {
     }
 
     @Test
-    void toolsList_shouldContainListStops() throws Exception {
+    void initialize_shouldContainExpectedProtocolVersion() {
+        assertThat(init.has("result")).isTrue();
+        assertThat(init.get("result").has("protocolVersion")).isTrue();
+        String protocolVersion = init.get("result").get("protocolVersion").asText();
+        assertThat(protocolVersion).isEqualTo("2024-11-05");
+    }
+
+    @Test
+    void toolsList_shouldContainAllTools() throws IOException {
         JsonNode tools = mcp.toolsList(2);
         assertThat(tools.has("result")).isTrue();
-
-        String json = tools.toString();
-        assertThat(json).contains("listStops");
+        assertThat(tools.get("result").has("tools")).isTrue();
+        assertThat(tools.get("result").withArrayProperty("tools").valueStream()
+                .allMatch(tool ->
+                    switch (tool.get("name").asText()) {
+                        case "listStops", "findFastestConnections", "listNextDepartures" -> true;
+                        default -> false;
+                    }
+                )).isTrue();
     }
 
     @Test
-    void listStops_shouldReturnSomeStops() throws Exception {
-        JsonNode call = mcp.toolsCall(2, "listStops", Map.of("limit", 5));
+    void listStops_shouldReturnCorrectData() throws IOException {
+        JsonNode call = mcp.toolsCall(2, "listStops", Map.of("limit", 5, "lastStopName", "AKF / PK"));
 
         assertThat(call.has("result")).isTrue();
-
-        String json = call.toString();
-        assertThat(json).contains("AKF / PK");
+        assertThat(call.get("result").get("isError").asBoolean()).isFalse();
+        assertThat(call.toString())
+                .contains("Aleja Róż")
+                .contains("\\\"lastStopName\\\":\\\"Aleja Waszyngtona\\\"")
+                .contains("\\\"hasNext\\\":true");
     }
 
     @Test
-    void unknownTool_shouldReturnError() throws Exception {
+    void findFastestConnections_shouldReturnCorrectData() throws IOException {
+        JsonNode call = mcp.toolsCall(2, "findFastestConnections", Map.of("fromStop", "Kawiory", "toStop", "Czarnowiejska"));
+
+        assertThat(call.has("result")).isTrue();
+        assertThat(call.get("result").get("isError").asBoolean()).isFalse();
+        assertThat(call.get("result").withArrayProperty("content").get(0).get("text").toString()).contains(",\\\"connections\\\":[{\\\"lineNumber\\\":");
+    }
+
+    @Test
+    void listNextDepartures_shouldReturnCorrectData() throws IOException {
+        JsonNode call = mcp.toolsCall(2, "listNextDepartures", Map.of("stopName", "Teatr Bagatela", "lineNumber", "4"));
+
+        assertThat(call.has("result")).isTrue();
+        assertThat(call.get("result").get("isError").asBoolean()).isFalse();
+        assertThat(call.get("result").withArrayProperty("content").get(0).get("text").toString()).contains(",\\\"departures\\\":[{\\\"scheduledDeparture\\\":");
+    }
+
+    @Test
+    void unknownTool_shouldReturnError() throws IOException {
         JsonNode call = mcp.toolsCall(3, "doesNotExist", Map.of());
 
+        assertThat(call.has("result")).isFalse();
         assertThat(call.has("error")).isTrue();
         assertThat(call.get("error").get("code").asInt()).isNotZero();
     }
