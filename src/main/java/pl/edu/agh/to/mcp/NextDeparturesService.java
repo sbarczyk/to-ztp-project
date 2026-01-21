@@ -5,12 +5,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import pl.edu.agh.to.dbresults.FindNextDeparturesForLineResult;
 import pl.edu.agh.to.gtfs.realtime.GtfsDelayService;
 import pl.edu.agh.to.dto.DeparturesResponseDto;
 import pl.edu.agh.to.dto.NextDepartureDto;
 import pl.edu.agh.to.model.Stop;
-import pl.edu.agh.to.model.StopTime;
-import pl.edu.agh.to.model.Trip;
 import pl.edu.agh.to.repository.StopRepository;
 import pl.edu.agh.to.repository.StopTimeRepository;
 import pl.edu.agh.to.service.ActiveServiceResolver;
@@ -40,8 +39,8 @@ public class NextDeparturesService {
         LocalDate queryDate = (date != null) ? date : LocalDate.now();
         LocalTime queryTime = (time != null) ? time : LocalTime.now();
 
-        String stop = normalize(stopName);
-        String line = normalize(lineNumber);
+        String stop = McpUtils.normalize(stopName);
+        String line = McpUtils.normalize(lineNumber);
 
         log.info("Finding next 5 departures: stop='{}', line='{}' at {} {}", stop, line, queryDate, queryTime);
 
@@ -58,7 +57,7 @@ public class NextDeparturesService {
         List<String> activeServices = activeServiceResolver.getActiveServiceIds(queryDate);
         Map<String, Long> delays = delayService.getCurrentDelays();
 
-        List<Object[]> rows = stopTimeRepository.findNextDeparturesForLine(
+        List<FindNextDeparturesForLineResult> results = stopTimeRepository.findNextDeparturesForLine(
                 stopIds,
                 line,
                 queryTime,
@@ -66,8 +65,8 @@ public class NextDeparturesService {
                 PageRequest.of(0, 5)
         );
 
-        List<NextDepartureDto> departures = rows.stream()
-                .map(row -> mapToDeparture(row, delays))
+        List<NextDepartureDto> departures = results.stream()
+                .map(result -> mapToDeparture(result, delays))
                 .toList();
 
         return new DeparturesResponseDto(stop, line, queryDate, queryTime, departures);
@@ -79,13 +78,10 @@ public class NextDeparturesService {
                 .toList();
     }
 
-    private NextDepartureDto mapToDeparture(Object[] row, Map<String, Long> delays) {
-        StopTime st = (StopTime) row[0];
-        Trip trip = (Trip) row[1];
+    private NextDepartureDto mapToDeparture(FindNextDeparturesForLineResult result, Map<String, Long> delays) {
+        long delaySeconds = delays.getOrDefault(result.trip().getTripId(), 0L);
 
-        long delaySeconds = delays.getOrDefault(trip.getTripId(), 0L);
-
-        LocalTime scheduled = st.getDepartureTime();
+        LocalTime scheduled = result.stopTime().getDepartureTime();
         LocalTime predicted = scheduled.plusSeconds(delaySeconds);
 
         return new NextDepartureDto(
@@ -93,11 +89,5 @@ public class NextDeparturesService {
                 predicted,
                 delaySeconds
         );
-    }
-
-    private String normalize(String value) {
-        if (value == null) return null;
-        String t = value.trim();
-        return t.isEmpty() ? null : t;
     }
 }

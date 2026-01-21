@@ -5,13 +5,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import pl.edu.agh.to.dbresults.FindNextDeparturesResult;
 import pl.edu.agh.to.gtfs.realtime.GtfsDelayService;
 import pl.edu.agh.to.dto.ConnectionDto;
 import pl.edu.agh.to.dto.ConnectionsResponseDto;
-import pl.edu.agh.to.model.Route;
 import pl.edu.agh.to.model.Stop;
-import pl.edu.agh.to.model.StopTime;
-import pl.edu.agh.to.model.Trip;
 import pl.edu.agh.to.repository.StopRepository;
 import pl.edu.agh.to.repository.StopTimeRepository;
 import pl.edu.agh.to.service.ActiveServiceResolver;
@@ -41,8 +39,8 @@ public class ConnectionSearchService {
         LocalDate queryDate = (date != null) ? date : LocalDate.now();
         LocalTime queryTime = (time != null) ? time : LocalTime.now();
 
-        String from = normalize(fromStop);
-        String to = normalize(toStop);
+        String from = McpUtils.normalize(fromStop);
+        String to = McpUtils.normalize(toStop);
 
         log.info("Finding top 3 connections: '{}' -> '{}' at {} {}", from, to, queryDate, queryTime);
 
@@ -61,7 +59,7 @@ public class ConnectionSearchService {
         List<String> activeServices = activeServiceResolver.getActiveServiceIds(queryDate);
         Map<String, Long> delays = delayService.getCurrentDelays();
 
-        List<Object[]> rows = stopTimeRepository.findNextDepartures(
+        List<FindNextDeparturesResult> nextDeparturesResults = stopTimeRepository.findNextDepartures(
                 fromIds,
                 toIds,
                 queryTime,
@@ -69,8 +67,8 @@ public class ConnectionSearchService {
                 PageRequest.of(0, 3)
         );
 
-        List<ConnectionDto> connections = rows.stream()
-                .map(row -> mapToConnection(row, delays))
+        List<ConnectionDto> connections = nextDeparturesResults.stream()
+                .map(result -> mapToConnection(result, delays))
                 .toList();
 
         return new ConnectionsResponseDto(from, to, queryDate, queryTime, connections);
@@ -82,30 +80,19 @@ public class ConnectionSearchService {
                 .toList();
     }
 
-    private ConnectionDto mapToConnection(Object[] row, Map<String, Long> delays) {
-        StopTime start = (StopTime) row[0];
-        StopTime end = (StopTime) row[1];
-        Trip trip = (Trip) row[2];
-        Route route = (Route) row[3];
+    private ConnectionDto mapToConnection(FindNextDeparturesResult result, Map<String, Long> delays) {
+        long delaySeconds = delays.getOrDefault(result.trip().getTripId(), 0L);
 
-        long delaySeconds = delays.getOrDefault(trip.getTripId(), 0L);
-
-        LocalTime scheduledDeparture = start.getDepartureTime();
+        LocalTime scheduledDeparture = result.stopTimeA().getDepartureTime();
         LocalTime predictedDeparture = scheduledDeparture.plusSeconds(delaySeconds);
-        LocalTime predictedArrival = end.getArrivalTime().plusSeconds(delaySeconds);
+        LocalTime predictedArrival = result.stopTimeB().getArrivalTime().plusSeconds(delaySeconds);
 
         return new ConnectionDto(
-                route.getRouteShortName(),
+                result.route().getRouteShortName(),
                 scheduledDeparture,
                 predictedDeparture,
                 predictedArrival,
                 delaySeconds
         );
-    }
-
-    private String normalize(String value) {
-        if (value == null) return null;
-        String t = value.trim();
-        return t.isEmpty() ? null : t;
     }
 }

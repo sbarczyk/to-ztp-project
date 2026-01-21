@@ -10,9 +10,9 @@ import pl.edu.agh.to.repository.CalendarRepository;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -29,12 +29,10 @@ public class ActiveServiceResolver {
         List<Calendar> candidates = calendarRepository
                 .findByStartDateLessThanEqualAndEndDateGreaterThanEqual(date, date);
 
-        Set<String> active = new HashSet<>();
-        for (Calendar c : candidates) {
-            if (operatesOn(c, day)) {
-                active.add(c.getServiceId());
-            }
-        }
+        Set<String> active = candidates.stream()
+                .filter(calendar -> operatesOn(calendar, day))
+                .map(Calendar::getServiceId)
+                .collect(Collectors.toSet());
 
         // Apply exceptions only for the requested date (no full table scan)
         List<CalendarDate> exceptions = calendarDateRepository.findByDate(date);

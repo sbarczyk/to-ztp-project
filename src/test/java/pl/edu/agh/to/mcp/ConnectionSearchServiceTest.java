@@ -7,6 +7,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import pl.edu.agh.to.dbresults.FindNextDeparturesResult;
 import pl.edu.agh.to.dto.ConnectionDto;
 import pl.edu.agh.to.dto.ConnectionsResponseDto;
 import pl.edu.agh.to.gtfs.realtime.GtfsDelayService;
@@ -64,7 +65,7 @@ class ConnectionSearchServiceTest {
 
         when(delayService.getCurrentDelays()).thenReturn(Map.of("T1", 60L));
 
-        Object[] row1 = createDatabaseRow("T1", "4", LocalTime.of(12, 10), LocalTime.of(12, 30));
+        FindNextDeparturesResult row1 = createDatabaseRow("T1", "4", LocalTime.of(12, 10), LocalTime.of(12, 30));
 
         when(stopTimeRepository.findNextDepartures(
                 eq(List.of("id_start")),
@@ -79,7 +80,7 @@ class ConnectionSearchServiceTest {
 
         // then
         assertThat(response.connections()).hasSize(1);
-        ConnectionDto conn = response.connections().get(0);
+        ConnectionDto conn = response.connections().getFirst();
 
         assertThat(conn.lineNumber()).isEqualTo("4");
         assertThat(conn.scheduledDeparture()).isEqualTo(LocalTime.of(12, 10));
@@ -164,7 +165,7 @@ class ConnectionSearchServiceTest {
         verify(activeServiceResolver).getActiveServiceIds(any(LocalDate.class));
     }
 
-    private Object[] createDatabaseRow(String tripId, String routeName, LocalTime departure, LocalTime arrival) {
+    private FindNextDeparturesResult createDatabaseRow(String tripId, String routeName, LocalTime departure, LocalTime arrival) {
         Trip trip = new Trip();
         trip.setTripId(tripId);
 
@@ -177,6 +178,6 @@ class ConnectionSearchServiceTest {
         StopTime endSt = new StopTime();
         endSt.setArrivalTime(arrival);
 
-        return new Object[]{startSt, endSt, trip, route};
+        return new FindNextDeparturesResult(startSt, endSt, trip, route);
     }
 }

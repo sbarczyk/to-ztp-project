@@ -4,6 +4,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+import pl.edu.agh.to.dbresults.FindNextDeparturesForLineResult;
+import pl.edu.agh.to.dbresults.FindNextDeparturesResult;
 import pl.edu.agh.to.model.StopTime;
 
 import java.time.LocalTime;
@@ -13,7 +15,7 @@ import java.util.List;
 public interface StopTimeRepository extends JpaRepository<StopTime, Long> {
 
     @Query("""
-        SELECT stA, stB, t, r
+        SELECT new pl.edu.agh.to.dbresults.FindNextDeparturesResult(stA, stB, t, r)
         FROM StopTime stA
         JOIN Trip t ON t.tripId = stA.tripId
         JOIN Route r ON r.routeId = t.routeId
@@ -25,7 +27,7 @@ public interface StopTimeRepository extends JpaRepository<StopTime, Long> {
           AND t.serviceId IN :activeServices
         ORDER BY stA.departureTime ASC
     """)
-    List<Object[]> findNextDepartures(
+    List<FindNextDeparturesResult> findNextDepartures(
             List<String> startIds,
             List<String> endIds,
             LocalTime startTime,
@@ -34,7 +36,7 @@ public interface StopTimeRepository extends JpaRepository<StopTime, Long> {
     );
 
     @Query("""
-        SELECT st, t, r
+        SELECT new pl.edu.agh.to.dbresults.FindNextDeparturesForLineResult(st, t)
         FROM StopTime st
         JOIN Trip t ON t.tripId = st.tripId
         JOIN Route r ON r.routeId = t.routeId
@@ -44,7 +46,7 @@ public interface StopTimeRepository extends JpaRepository<StopTime, Long> {
           AND t.serviceId IN :activeServices
         ORDER BY st.departureTime ASC
     """)
-    List<Object[]> findNextDeparturesForLine(
+    List<FindNextDeparturesForLineResult> findNextDeparturesForLine(
             List<String> stopIds,
             String lineNumber,
             LocalTime startTime,

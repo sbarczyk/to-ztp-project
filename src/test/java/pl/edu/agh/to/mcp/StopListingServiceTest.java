@@ -17,8 +17,7 @@ import pl.edu.agh.to.repository.StopRepository;
 import java.util.Collections;
 import java.util.List;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -85,17 +84,22 @@ class StopListingServiceTest {
         // given
         int limit = 101;
 
-        // when & then
-        assertThatThrownBy(() -> service.listStopNames(null, limit, null))
+        // when
+        Throwable thrown = catchThrowable(() -> service.listStopNames(null, limit, null));
+
+        // then
+        assertThat(thrown)
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("limit must be in range");
     }
 
     @Test
     void shouldThrowExceptionWhenLimitIsZeroOrNegative() {
-        // when & then
-        assertThatThrownBy(() -> service.listStopNames(null, 0, null))
-                .isInstanceOf(BadRequestException.class);
+        // when
+        Throwable thrown = catchThrowable(() -> service.listStopNames(null, 0, null));
+
+        //then
+        assertThat(thrown).isInstanceOf(BadRequestException.class);
     }
 
     @Test

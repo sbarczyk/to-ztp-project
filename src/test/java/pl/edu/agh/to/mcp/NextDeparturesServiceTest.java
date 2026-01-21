@@ -6,6 +6,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Pageable;
+import pl.edu.agh.to.dbresults.FindNextDeparturesForLineResult;
 import pl.edu.agh.to.dto.DeparturesResponseDto;
 import pl.edu.agh.to.dto.NextDepartureDto;
 import pl.edu.agh.to.gtfs.realtime.GtfsDelayService;
@@ -55,7 +56,7 @@ class NextDeparturesServiceTest {
 
         when(delayService.getCurrentDelays()).thenReturn(Map.of("T1", 120L));
 
-        Object[] row = createDbRow("T1", LocalTime.of(10, 5));
+        FindNextDeparturesForLineResult row = createDbRow("T1", LocalTime.of(10, 5));
 
         when(stopTimeRepository.findNextDeparturesForLine(
                 eq(List.of("s1")),
@@ -100,13 +101,13 @@ class NextDeparturesServiceTest {
         assertThat(result.departures()).isEmpty();
     }
 
-    private Object[] createDbRow(String tripId, LocalTime departure) {
+    private FindNextDeparturesForLineResult createDbRow(String tripId, LocalTime departure) {
         Trip trip = new Trip();
         trip.setTripId(tripId);
 
         StopTime stopTime = new StopTime();
         stopTime.setDepartureTime(departure);
 
-        return new Object[]{stopTime, trip};
+        return new FindNextDeparturesForLineResult(stopTime, trip);
     }
 }
