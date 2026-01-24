@@ -24,8 +24,8 @@ public class StopListingService {
             throw new BadRequestException("limit must be in range 1.." + props.maxSize());
         }
 
-        String prefix = trimToNull(query);
-        String last = trimToNull(lastStopName);
+        String prefix = StopNormalizer.normalize(query);
+        String last = StopNormalizer.normalize(lastStopName);
 
         var pageable = PageRequest.of(0, lim);
 
@@ -34,16 +34,8 @@ public class StopListingService {
                 : stopRepository.findDistinctNamesByPrefixAfter(prefix, last, pageable);
 
         List<String> stops = slice.getContent();
-        String newLastStopName = stops.isEmpty() ? null : stops.get(stops.size() - 1);
+        String newLastStopName = stops.isEmpty() ? null : stops.getLast();
 
         return new StopNamesSliceDto(stops, newLastStopName, slice.hasNext());
-    }
-
-    private String trimToNull(String value) {
-        if (value == null) {
-            return null;
-        }
-        String trimmed = value.trim();
-        return trimmed.isEmpty() ? null : trimmed;
     }
 }
