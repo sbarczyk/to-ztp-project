@@ -42,9 +42,4 @@ public class Calendar {
 
     @Column(name = "end_date", nullable = false)
     private LocalDate endDate;
-
-
-    public boolean operatesOn(DayOfWeek day) {
-        return operatingDays != null && operatingDays.contains(day);
-    }
 }

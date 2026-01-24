@@ -27,8 +27,6 @@ class McpToolsControllerTest {
     private ConnectionSearchService connectionSearchService;
     @Mock
     private NextDeparturesService nextDeparturesService;
-    @Mock
-    private DateTimeParamParser dateTimeParser;
 
     @InjectMocks
     private McpToolsController controller;
@@ -55,9 +53,6 @@ class McpToolsControllerTest {
         LocalDate parsedDate = LocalDate.of(2024, 1, 1);
         LocalTime parsedTime = LocalTime.of(12, 0);
 
-        when(dateTimeParser.parseDateOrNull(dateStr)).thenReturn(parsedDate);
-        when(dateTimeParser.parseTimeOrNull(timeStr)).thenReturn(parsedTime);
-
         ConnectionsResponseDto expected = new ConnectionsResponseDto("A", "B", parsedDate, parsedTime, Collections.emptyList());
         when(connectionSearchService.findTop3Connections("A", "B", parsedDate, parsedTime))
                 .thenReturn(expected);
@@ -77,9 +72,6 @@ class McpToolsControllerTest {
         String timeStr = "10:00";
         LocalDate parsedDate = LocalDate.of(2024, 1, 1);
         LocalTime parsedTime = LocalTime.of(10, 0);
-
-        when(dateTimeParser.parseDateOrNull(dateStr)).thenReturn(parsedDate);
-        when(dateTimeParser.parseTimeOrNull(timeStr)).thenReturn(parsedTime);
 
         DeparturesResponseDto expected = new DeparturesResponseDto("Stop", "Line", parsedDate, parsedTime, Collections.emptyList());
         when(nextDeparturesService.getNext5Departures("Stop", "Line", parsedDate, parsedTime))

@@ -39,8 +39,8 @@ public class NextDeparturesService {
         LocalDate queryDate = (date != null) ? date : LocalDate.now();
         LocalTime queryTime = (time != null) ? time : LocalTime.now();
 
-        String stop = McpUtils.normalize(stopName);
-        String line = McpUtils.normalize(lineNumber);
+        String stop = StopNormalizer.normalize(stopName);
+        String line = StopNormalizer.normalize(lineNumber);
 
         log.info("Finding next 5 departures: stop='{}', line='{}' at {} {}", stop, line, queryDate, queryTime);
 

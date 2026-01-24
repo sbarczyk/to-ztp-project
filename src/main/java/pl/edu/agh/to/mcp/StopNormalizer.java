@@ -1,9 +1,8 @@
 package pl.edu.agh.to.mcp;
 
-class McpUtils {
-    private McpUtils() {
-        throw new IllegalStateException("Utility class");
-    }
+class StopNormalizer {
+
+    private StopNormalizer() {}  // utility class
 
     public static String normalize(String value) {
         if (value == null) return null;

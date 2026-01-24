@@ -11,16 +11,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class DateTimeParamParserTest {
 
-    private final DateTimeParamParser parser = new DateTimeParamParser();
-
-
     @Test
     void shouldParseValidDate() {
         // given
         String input = "2024-05-20";
 
         // when
-        LocalDate result = parser.parseDateOrNull(input);
+        LocalDate result = DateTimeParamParser.parseDateOrNull(input);
 
         // then
         assertThat(result).isEqualTo(LocalDate.of(2024, 5, 20));
@@ -29,7 +26,7 @@ class DateTimeParamParserTest {
     @Test
     void shouldReturnNullForNullDateInput() {
         // when
-        LocalDate result = parser.parseDateOrNull(null);
+        LocalDate result = DateTimeParamParser.parseDateOrNull(null);
 
         // then
         assertThat(result).isNull();
@@ -38,7 +35,7 @@ class DateTimeParamParserTest {
     @Test
     void shouldReturnNullForBlankDateInput() {
         // when
-        LocalDate result = parser.parseDateOrNull("   ");
+        LocalDate result = DateTimeParamParser.parseDateOrNull("   ");
 
         // then
         assertThat(result).isNull();
@@ -50,7 +47,7 @@ class DateTimeParamParserTest {
         String input = "20-05-2024";
 
         // when & then
-        assertThatThrownBy(() -> parser.parseDateOrNull(input))
+        assertThatThrownBy(() -> DateTimeParamParser.parseDateOrNull(input))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("Invalid date format");
     }
@@ -62,7 +59,7 @@ class DateTimeParamParserTest {
         String input = "14:30";
 
         // when
-        LocalTime result = parser.parseTimeOrNull(input);
+        LocalTime result = DateTimeParamParser.parseTimeOrNull(input);
 
         // then
         assertThat(result).isEqualTo(LocalTime.of(14, 30));
@@ -74,7 +71,7 @@ class DateTimeParamParserTest {
         String input = "14:30:15";
 
         // when
-        LocalTime result = parser.parseTimeOrNull(input);
+        LocalTime result = DateTimeParamParser.parseTimeOrNull(input);
 
         // then
         assertThat(result).isEqualTo(LocalTime.of(14, 30, 15));
@@ -83,7 +80,16 @@ class DateTimeParamParserTest {
     @Test
     void shouldReturnNullForNullTimeInput() {
         // when
-        LocalTime result = parser.parseTimeOrNull(null);
+        LocalTime result = DateTimeParamParser.parseTimeOrNull(null);
+
+        // then
+        assertThat(result).isNull();
+    }
+
+    @Test
+    void shouldReturnNullForBlankTimeInput() {
+        // when
+        LocalTime result = DateTimeParamParser.parseTimeOrNull("   ");
 
         // then
         assertThat(result).isNull();
@@ -95,7 +101,7 @@ class DateTimeParamParserTest {
         String input = "25:00";
 
         // when & then
-        assertThatThrownBy(() -> parser.parseTimeOrNull(input))
+        assertThatThrownBy(() -> DateTimeParamParser.parseTimeOrNull(input))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("Invalid time format");
     }

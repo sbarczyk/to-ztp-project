@@ -39,8 +39,8 @@ public class ConnectionSearchService {
         LocalDate queryDate = (date != null) ? date : LocalDate.now();
         LocalTime queryTime = (time != null) ? time : LocalTime.now();
 
-        String from = McpUtils.normalize(fromStop);
-        String to = McpUtils.normalize(toStop);
+        String from = StopNormalizer.normalize(fromStop);
+        String to = StopNormalizer.normalize(toStop);
 
         log.info("Finding top 3 connections: '{}' -> '{}' at {} {}", from, to, queryDate, queryTime);
 

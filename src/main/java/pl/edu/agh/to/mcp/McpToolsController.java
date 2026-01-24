@@ -15,7 +15,6 @@ public class McpToolsController {
     private final StopListingService stopListingService;
     private final ConnectionSearchService connectionSearchService;
     private final NextDeparturesService nextDeparturesService;
-    private final DateTimeParamParser dateTimeParser;
 
     @Tool(description = "List stop names in Krakow (unique names) using cursor-based pagination.")
     public StopNamesSliceDto listStops(
@@ -39,8 +38,8 @@ public class McpToolsController {
         return connectionSearchService.findTop3Connections(
                 fromStop,
                 toStop,
-                dateTimeParser.parseDateOrNull(date),
-                dateTimeParser.parseTimeOrNull(time)
+                DateTimeParamParser.parseDateOrNull(date),
+                DateTimeParamParser.parseTimeOrNull(time)
         );
     }
 
@@ -54,8 +53,8 @@ public class McpToolsController {
         return nextDeparturesService.getNext5Departures(
                 stopName,
                 lineNumber,
-                dateTimeParser.parseDateOrNull(date),
-                dateTimeParser.parseTimeOrNull(time)
+                DateTimeParamParser.parseDateOrNull(date),
+                DateTimeParamParser.parseTimeOrNull(time)
         );
     }
 }
