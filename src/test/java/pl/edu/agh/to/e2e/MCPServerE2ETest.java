@@ -1,6 +1,5 @@
 package pl.edu.agh.to.e2e;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -17,8 +16,6 @@ import static org.awaitility.Awaitility.await;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class MCPServerE2ETest {
-
-    private static final ObjectMapper om = new ObjectMapper();
 
     private Process app;
     private McpStdioClient mcp;
