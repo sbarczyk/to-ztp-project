@@ -4,6 +4,8 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@EnableConfigurationProperties(GtfsProperties.class)
+@EnableConfigurationProperties({
+        GtfsProperties.class,
+        McpStopsProperties.class})
 public class PropertiesConfig {
 }

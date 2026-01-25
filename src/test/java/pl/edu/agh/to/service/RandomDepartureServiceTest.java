@@ -4,11 +4,9 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.transit.realtime.GtfsRealtime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import pl.edu.agh.to.exceptions.NotFoundException;
 import pl.edu.agh.to.gtfs.realtime.GtfsClient;
-import pl.edu.agh.to.gtfs.realtime.GtfsParser;
-import pl.edu.agh.to.model.RandomDepartureDto;
+import pl.edu.agh.to.dto.RandomDepartureDto;
 
 import java.time.Instant;
 import java.util.List;
@@ -24,7 +22,6 @@ import static org.mockito.Mockito.when;
 class RandomDepartureServiceTest {
 
     private GtfsClient client;
-    private GtfsParser parser;
     private RandomDepartureService service;
     private static final String VEHICLE_TEST_ID = "M:401";
     private static final String STOP_TEST_ID = "2048408";
@@ -33,20 +30,15 @@ class RandomDepartureServiceTest {
     @BeforeEach
     void setUp() {
         client = mock(GtfsClient.class);
-        parser = mock(GtfsParser.class);
-        service = new RandomDepartureService(client, parser, new Random(0));
+        service = new RandomDepartureService(client, new Random(0));
     }
 
     @Test
     void shouldReturnDto_givenValidData_thenCorrectDtoReturned() throws Exception {
         // given
-        byte[] bytes = new byte[]{1, 2, 3};
-        when(client.fetchTripUpdatesAsBytes()).thenReturn(bytes);
-
         long now = Instant.now().getEpochSecond();
         GtfsRealtime.TripUpdate tripUpdate = createValidTripUpdate(now);
-
-        when(parser.parseTripUpdates(bytes))
+        when(client.fetchTripUpdates())
                 .thenReturn(List.of(tripUpdate));
 
         // when
@@ -61,8 +53,7 @@ class RandomDepartureServiceTest {
     @Test
     void shouldThrowException_givenNoTrips_thenNotFoundThrown() throws Exception {
         // given
-        when(client.fetchTripUpdatesAsBytes()).thenReturn(new byte[]{});
-        when(parser.parseTripUpdates(Mockito.any()))
+        when(client.fetchTripUpdates())
                 .thenReturn(List.of());
 
         // when
@@ -75,15 +66,13 @@ class RandomDepartureServiceTest {
     @Test
     void shouldThrowException_givenNoStops_thenNotFoundThrown() throws Exception {
         // given
-        when(client.fetchTripUpdatesAsBytes()).thenReturn(new byte[]{});
-
         GtfsRealtime.TripUpdate tripUpdate =
                 GtfsRealtime.TripUpdate.newBuilder()
                         .setTrip(GtfsRealtime.TripDescriptor.newBuilder().setTripId(TRIP_TEST_ID).build())
                         .setVehicle(GtfsRealtime.VehicleDescriptor.newBuilder().setId(VEHICLE_TEST_ID).build())
                         .build();
 
-        when(parser.parseTripUpdates(Mockito.any()))
+        when(client.fetchTripUpdates())
                 .thenReturn(List.of(tripUpdate));
 
         // when
@@ -96,8 +85,6 @@ class RandomDepartureServiceTest {
     @Test
     void shouldThrowException_givenStopWithoutDepartureTime_thenNotFoundThrown() throws Exception {
         // given
-        when(client.fetchTripUpdatesAsBytes()).thenReturn(new byte[]{});
-
         GtfsRealtime.TripUpdate.StopTimeUpdate stop =
                 GtfsRealtime.TripUpdate.StopTimeUpdate.newBuilder()
                         .setStopId(STOP_TEST_ID)
@@ -110,7 +97,7 @@ class RandomDepartureServiceTest {
                         .addStopTimeUpdate(stop)
                         .build();
 
-        when(parser.parseTripUpdates(Mockito.any()))
+        when(client.fetchTripUpdates())
                 .thenReturn(List.of(tripUpdate));
 
         // when
@@ -123,8 +110,7 @@ class RandomDepartureServiceTest {
     @Test
     void shouldPropagateException_givenParserThrowsException_thenExceptionPropagated() throws Exception {
         // given
-        when(client.fetchTripUpdatesAsBytes()).thenReturn(new byte[]{});
-        when(parser.parseTripUpdates(Mockito.any()))
+        when(client.fetchTripUpdates())
                 .thenThrow(new InvalidProtocolBufferException("invalid"));
 
         // when

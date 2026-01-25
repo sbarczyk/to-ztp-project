@@ -2,7 +2,7 @@ package pl.edu.agh.to.controller;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import pl.edu.agh.to.model.RandomDepartureDto;
+import pl.edu.agh.to.dto.RandomDepartureDto;
 import pl.edu.agh.to.service.RandomDepartureService;
 import pl.edu.agh.to.service.RouteService;
 

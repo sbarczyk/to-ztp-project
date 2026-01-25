@@ -7,8 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import pl.edu.agh.to.exceptions.NotFoundException;
 import pl.edu.agh.to.gtfs.realtime.GtfsClient;
-import pl.edu.agh.to.gtfs.realtime.GtfsParser;
-import pl.edu.agh.to.model.RandomDepartureDto;
+import pl.edu.agh.to.dto.RandomDepartureDto;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -27,12 +26,10 @@ public class RandomDepartureService {
     private static final int MAX_ATTEMPTS = 20;
 
     private final GtfsClient gtfsClient;
-    private final GtfsParser gtfsParser;
     private final Random random;
 
     public RandomDepartureDto getRandomDepartureInfo() throws InvalidProtocolBufferException {
-        byte[] data = gtfsClient.fetchTripUpdatesAsBytes();
-        List<GtfsRealtime.TripUpdate> trips = gtfsParser.parseTripUpdates(data);
+        List<GtfsRealtime.TripUpdate> trips = gtfsClient.fetchTripUpdates();
 
         if (trips.isEmpty()) {
             throw new NotFoundException("No trip updates available");

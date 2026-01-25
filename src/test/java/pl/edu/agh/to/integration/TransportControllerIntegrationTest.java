@@ -10,8 +10,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import pl.edu.agh.to.controller.TransportController;
 import pl.edu.agh.to.exceptions.ExternalServiceException;
 import pl.edu.agh.to.exceptions.NotFoundException;
-import pl.edu.agh.to.model.RandomDepartureDto;
-import pl.edu.agh.to.model.RouteSearchResultDto;
+import pl.edu.agh.to.dto.RandomDepartureDto;
+import pl.edu.agh.to.dto.RouteSearchResultDto;
+import pl.edu.agh.to.mcp.McpToolsController;
 import pl.edu.agh.to.service.RandomDepartureService;
 import pl.edu.agh.to.service.RouteService;
 
@@ -35,6 +36,8 @@ class TransportControllerIntegrationTest {
     private RandomDepartureService randomDepartureService;
     @MockitoBean
     private RouteService routeService;
+    @MockitoBean
+    private McpToolsController mcpToolsController;
 
     private static final String RANDOM_DEPARTURE_ENDPOINT = "/random-departure";
     private static final String FASTEST_ROUTE_ENDPOINT = "/route/fastest";

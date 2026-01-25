@@ -1,9 +1,8 @@
-package pl.edu.agh.to.service;
+package pl.edu.agh.to.gtfs.realtime;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.transit.realtime.GtfsRealtime;
 import org.junit.jupiter.api.Test;
-import pl.edu.agh.to.gtfs.realtime.GtfsParser;
 
 import java.time.Instant;
 import java.util.List;

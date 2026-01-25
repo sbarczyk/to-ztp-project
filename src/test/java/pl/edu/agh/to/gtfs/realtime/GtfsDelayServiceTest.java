@@ -13,7 +13,6 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -22,18 +21,13 @@ class GtfsDelayServiceTest {
     @Mock
     private GtfsClient gtfsClient;
 
-    @Mock
-    private GtfsParser gtfsParser;
-
     @InjectMocks
     private GtfsDelayService gtfsDelayService;
 
     @Test
     void shouldReturnEmptyMapWhenParserThrowsInvalidProtocolBufferException() throws InvalidProtocolBufferException {
         // Given
-        byte[] dummyData = new byte[]{1, 2, 3};
-        when(gtfsClient.fetchTripUpdatesAsBytes()).thenReturn(dummyData);
-        when(gtfsParser.parseTripUpdates(dummyData)).thenThrow(new InvalidProtocolBufferException("Parse error"));
+        when(gtfsClient.fetchTripUpdates()).thenThrow(new InvalidProtocolBufferException("Parse error"));
 
         // When
         Map<String, Long> result = gtfsDelayService.getCurrentDelays();
@@ -43,9 +37,9 @@ class GtfsDelayServiceTest {
     }
 
     @Test
-    void shouldReturnEmptyMapWhenGenericExceptionOccurs() {
+    void shouldReturnEmptyMapWhenGenericExceptionOccurs() throws InvalidProtocolBufferException {
         // Given
-        when(gtfsClient.fetchTripUpdatesAsBytes()).thenThrow(new RuntimeException("Network error"));
+        when(gtfsClient.fetchTripUpdates()).thenThrow(new RuntimeException("Network error"));
 
         // When
         Map<String, Long> result = gtfsDelayService.getCurrentDelays();
@@ -61,8 +55,7 @@ class GtfsDelayServiceTest {
         long delayValue = 150L;
         GtfsRealtime.TripUpdate tu = createTripUpdate(tripId, delayValue, true);
 
-        when(gtfsClient.fetchTripUpdatesAsBytes()).thenReturn(new byte[0]);
-        when(gtfsParser.parseTripUpdates(any())).thenReturn(List.of(tu));
+        when(gtfsClient.fetchTripUpdates()).thenReturn(List.of(tu));
 
         // When
         Map<String, Long> result = gtfsDelayService.getCurrentDelays();
@@ -79,8 +72,7 @@ class GtfsDelayServiceTest {
         long delayValue = 200L;
         GtfsRealtime.TripUpdate tu = createTripUpdate(tripId, delayValue, false);
 
-        when(gtfsClient.fetchTripUpdatesAsBytes()).thenReturn(new byte[0]);
-        when(gtfsParser.parseTripUpdates(any())).thenReturn(List.of(tu));
+        when(gtfsClient.fetchTripUpdates()).thenReturn(List.of(tu));
 
         // When
         Map<String, Long> result = gtfsDelayService.getCurrentDelays();
@@ -103,8 +95,7 @@ class GtfsDelayServiceTest {
                 .addStopTimeUpdate(stu)
                 .build();
 
-        when(gtfsClient.fetchTripUpdatesAsBytes()).thenReturn(new byte[0]);
-        when(gtfsParser.parseTripUpdates(any())).thenReturn(List.of(tu));
+        when(gtfsClient.fetchTripUpdates()).thenReturn(List.of(tu));
 
         // When
         Map<String, Long> result = gtfsDelayService.getCurrentDelays();
@@ -121,8 +112,7 @@ class GtfsDelayServiceTest {
                 .addStopTimeUpdate(GtfsRealtime.TripUpdate.StopTimeUpdate.newBuilder().setStopSequence(1).build())
                 .buildPartial();
 
-        when(gtfsClient.fetchTripUpdatesAsBytes()).thenReturn(new byte[0]);
-        when(gtfsParser.parseTripUpdates(any())).thenReturn(List.of(tu));
+        when(gtfsClient.fetchTripUpdates()).thenReturn(List.of(tu));
 
         // When
         Map<String, Long> result = gtfsDelayService.getCurrentDelays();
@@ -138,8 +128,7 @@ class GtfsDelayServiceTest {
                 .setTrip(GtfsRealtime.TripDescriptor.newBuilder().setTripId("T4").build())
                 .build();
 
-        when(gtfsClient.fetchTripUpdatesAsBytes()).thenReturn(new byte[0]);
-        when(gtfsParser.parseTripUpdates(any())).thenReturn(List.of(tu));
+        when(gtfsClient.fetchTripUpdates()).thenReturn(List.of(tu));
 
         // When
         Map<String, Long> result = gtfsDelayService.getCurrentDelays();

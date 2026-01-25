@@ -89,7 +89,8 @@ public class StaticGtfsParser {
                 .map(p -> new Trip(
                         p[TripsColumns.ID],
                         p[TripsColumns.ROUTE_ID],
-                        p[TripsColumns.SERVICE_ID]))
+                        p[TripsColumns.SERVICE_ID]
+                        ))
                 .toList();
     }
 
